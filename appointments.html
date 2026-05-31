@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointments — SDC Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Appointments</div>
+      <div class="topbar-sub" id="subtitle">Loading…</div>
+    </div>
+    <div class="topbar-right">
+      <select id="status-filter" onchange="loadBookings()" style="width:auto;font-size:0.8rem;padding:6px 10px">
+        <option value="">All</option>
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="rejected">Rejected</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="no_show">No-show</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">Export CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="openNew()">+ Manual Booking</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <div id="table-wrap">
+        <div class="loading">Loading appointments…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Booking detail modal -->
+<div class="modal-backdrop hidden" id="modal">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-title">Appointment</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, renderShell } from './shell.js';
+import { api } from './config.js';
+
+requireAuth();
+renderShell({ active: 'appointments' });
+
+const STATUS_BADGE = {
+  pending:   'badge-yellow',
+  confirmed: 'badge-green',
+  rejected:  'badge-red',
+  cancelled: 'badge-gray',
+  no_show:   'badge-orange',
+};
+
+let bookings = [];
+let currentId = null;
+
+window.loadBookings = async function() {
+  const status = document.getElementById('status-filter').value;
+  const path = status ? `/admin/bookings?status=${status}` : '/admin/bookings';
+  const res = await api(path);
+  bookings = await res.json();
+
+  document.getElementById('subtitle').textContent = `${bookings.length} appointment${bookings.length !== 1 ? 's' : ''}`;
+
+  if (!bookings.length) {
+    document.getElementById('table-wrap').innerHTML = `<div class="empty"><div class="empty-title">No appointments</div></div>`;
+    return;
+  }
+
+  document.getElementById('table-wrap').innerHTML = `
+    <table class="table">
+      <thead><tr>
+        <th>ID</th><th>Date / Time</th><th>Customer</th><th>Address</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${bookings.map(b => `
+          <tr onclick="openBooking('${b.id}')">
+            <td style="font-family:monospace;font-size:0.72rem;color:#484f58">${b.id.slice(0,8)}</td>
+            <td><div style="font-weight:600">${formatDate(b.appointment_date)}</div><div style="font-size:0.72rem;color:#8b949e">${formatTime(b.appointment_time)}</div></td>
+            <td><div style="font-weight:600">${b.customer_name}</div><div style="font-size:0.72rem;color:#8b949e">${b.customer_email}</div></td>
+            <td style="font-size:0.78rem;color:#8b949e;max-width:200px">${b.service_address || '—'}</td>
+            <td><span class="badge ${STATUS_BADGE[b.status] || 'badge-gray'}">${b.status}</span></td>
+            <td onclick="event.stopPropagation()">
+              ${b.status === 'pending' ? `
+                <button class="btn btn-primary btn-sm" onclick="updateStatus('${b.id}','confirmed')">Approve</button>
+                <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="updateStatus('${b.id}','rejected')">Reject</button>
+              ` : ''}
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+};
+
+window.openBooking = function(id) {
+  currentId = id;
+  const b = bookings.find(x => x.id === id);
+  document.getElementById('modal-title').textContent = `Appointment #${b.id.slice(0,8)}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>Status</label>
+        <select id="edit-status" onchange="document.getElementById('save-btn').disabled=false">
+          ${['pending','confirmed','rejected','cancelled','no_show'].map(s =>
+            `<option value="${s}" ${b.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label>Appointment Date</label>
+        <input type="date" id="edit-date" value="${b.appointment_date}">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>Customer Name</label>
+        <input type="text" id="edit-name" value="${b.customer_name}">
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label>Time</label>
+        <input type="text" id="edit-time" value="${b.appointment_time}">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>Email</label>
+        <input type="email" id="edit-email" value="${b.customer_email}">
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label>Phone</label>
+        <input type="text" id="edit-phone" value="${b.customer_phone || ''}">
+      </div>
+    </div>
+    <div class="form-group"><label>Service Address</label>
+      <input type="text" id="edit-address" value="${b.service_address || ''}">
+    </div>
+    <div class="form-group" style="margin-bottom:0"><label>Notes</label>
+      <textarea id="edit-notes">${b.notes || ''}</textarea>
+    </div>
+    ${b.shopify_order_number ? `<div style="margin-top:14px;font-size:0.72rem;color:#484f58">Shopify order #${b.shopify_order_number}</div>` : ''}
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" id="save-btn" onclick="saveBooking()">Save changes</button>
+  `;
+  document.getElementById('modal').classList.remove('hidden');
+};
+
+window.saveBooking = async function() {
+  const res = await api(`/admin/bookings/${currentId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      status: document.getElementById('edit-status').value,
+      customer_name: document.getElementById('edit-name').value,
+      customer_email: document.getElementById('edit-email').value,
+      customer_phone: document.getElementById('edit-phone').value,
+      service_address: document.getElementById('edit-address').value,
+      appointment_date: document.getElementById('edit-date').value,
+      appointment_time: document.getElementById('edit-time').value,
+      notes: document.getElementById('edit-notes').value,
+    }),
+  });
+  if (res.ok) { toast('Saved'); closeModal(); loadBookings(); }
+  else toast('Error saving', true);
+};
+
+window.updateStatus = async function(id, status) {
+  if (status === 'confirmed' && !confirm('Approve this booking? This will send a confirmation email and create a calendar event.')) return;
+  if (status === 'rejected' && !confirm('Reject this booking? This will email the customer.')) return;
+  const res = await api(`/admin/bookings/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  if (res.ok) { toast(`Booking ${status}`); loadBookings(); }
+  else toast('Error', true);
+};
+
+window.openNew = function() {
+  currentId = null;
+  document.getElementById('modal-title').textContent = 'New Manual Booking';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="notice yellow" style="margin-bottom:16px">Tip: for phone bookings with a Shopify order, paste the order number and the system will fill in customer details automatically in the real app.</div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>Customer Name</label><input type="text" id="edit-name" placeholder="John Smith"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Email</label><input type="email" id="edit-email" placeholder="john@email.com"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>Phone</label><input type="text" id="edit-phone" placeholder="(206) 555-1234"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Appointment Date</label><input type="date" id="edit-date"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>Time</label><input type="text" id="edit-time" placeholder="08:00"></div>
+      <div class="form-group" style="margin-bottom:0"><label>ZIP</label><input type="text" id="edit-zip" placeholder="98056"></div>
+    </div>
+    <div class="form-group"><label>Service Address</label><input type="text" id="edit-address"></div>
+    <div class="form-group"><label>Notes</label><textarea id="edit-notes"></textarea></div>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="createBooking()">Create Booking</button>
+  `;
+  document.getElementById('modal').classList.remove('hidden');
+};
+
+window.createBooking = async function() {
+  const res = await api('/api/bookings', {
+    method: 'POST',
+    body: JSON.stringify({
+      customer_name: document.getElementById('edit-name').value,
+      customer_email: document.getElementById('edit-email').value,
+      customer_phone: document.getElementById('edit-phone').value,
+      service_address: document.getElementById('edit-address').value,
+      appointment_date: document.getElementById('edit-date').value,
+      appointment_time: document.getElementById('edit-time').value,
+      zip: document.getElementById('edit-zip')?.value || '',
+      notes: document.getElementById('edit-notes').value,
+    }),
+  });
+  if (res.ok) { toast('Booking created'); closeModal(); loadBookings(); }
+  else toast('Error creating booking', true);
+};
+
+window.exportCSV = function() {
+  const headers = ['ID','Date','Time','Customer','Email','Phone','Address','Status'];
+  const rows = bookings.map(b => [b.id, b.appointment_date, b.appointment_time,
+    b.customer_name, b.customer_email, b.customer_phone||'', b.service_address||'', b.status]);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `sdc-appointments-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+};
+
+window.closeModal = () => document.getElementById('modal').classList.add('hidden');
+document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
+
+function formatDate(d) { return new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric', timeZone:'UTC' }); }
+function formatTime(t) { const [h,m] = t.split(':'); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; }
+
+window.toast = function(msg, err=false) {
+  const el = document.createElement('div');
+  el.className = `toast ${err ? 'toast-error' : 'toast-success'}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+};
+
+loadBookings();
+</script>
+</body>
+</html>

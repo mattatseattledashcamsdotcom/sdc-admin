@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seattle Dash Cams Admin</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;display:flex;align-items:center;justify-content:center}
+    .box{width:100%;max-width:360px;padding:20px}
+    .logo{font-size:0.85rem;font-weight:800;letter-spacing:0.06em;color:#3fb950;text-transform:uppercase;margin-bottom:6px}
+    h1{font-size:1.3rem;font-weight:700;margin-bottom:24px}
+    label{display:block;font-size:0.78rem;font-weight:600;color:#8b949e;margin-bottom:5px}
+    input{width:100%;padding:10px 14px;background:#161b22;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:0.9rem;outline:none;margin-bottom:16px}
+    input:focus{border-color:#388bfd}
+    button{width:100%;padding:10px;background:#238636;color:#fff;border:none;border-radius:8px;font-size:0.88rem;font-weight:700;cursor:pointer}
+    button:hover{background:#2ea043}
+    .err{color:#f85149;font-size:0.78rem;margin-top:10px;display:none}
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">SDC Admin</div>
+  <h1>Sign in</h1>
+  <label>Admin password</label>
+  <input type="password" id="secret" placeholder="Enter your admin secret" onkeydown="if(event.key==='Enter')login()">
+  <button onclick="login()">Sign in →</button>
+  <div class="err" id="err">Incorrect password — try again.</div>
+</div>
+<script type="module">
+  import { WORKER_URL, setSecret, api } from './config.js';
+
+  // Already logged in?
+  if (sessionStorage.getItem('sdc_admin_secret')) {
+    location.href = './index.html';
+  }
+
+  window.login = async function() {
+    const secret = document.getElementById('secret').value.trim();
+    if (!secret) return;
+    setSecret(secret);
+    // Verify by hitting a lightweight admin endpoint
+    try {
+      const res = await fetch(`${WORKER_URL}/admin/settings`, {
+        headers: { 'Authorization': `Bearer ${secret}` }
+      });
+      if (res.ok) {
+        location.href = './index.html';
+      } else {
+        sessionStorage.removeItem('sdc_admin_secret');
+        document.getElementById('err').style.display = 'block';
+      }
+    } catch {
+      document.getElementById('err').textContent = 'Could not reach server.';
+      document.getElementById('err').style.display = 'block';
+    }
+  };
+</script>
+</body>
+</html>
