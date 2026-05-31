@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reminders & Follow-ups — SDC Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Reminders &amp; Follow-ups</div>
+      <div class="topbar-sub">Automated email templates and timing</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" onclick="saveAll()">Save All</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="templates-wrap"><div class="loading">Loading…</div></div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, renderShell } from './shell.js';
+import { api } from './config.js';
+
+requireAuth();
+renderShell({ active: 'reminders' });
+
+const TEMPLATE_INFO = {
+  pending:   { label: 'Booking Received', sub: 'Sent immediately after deposit paid', timing: false },
+  confirmed: { label: 'Appointment Confirmed', sub: 'Sent when you approve a booking', timing: false },
+  rejected:  { label: 'Booking Rejected', sub: 'Sent when you reject a booking', timing: false },
+  reminder:  { label: 'Appointment Reminder', sub: 'Sent automatically before the appointment', timing: 'before' },
+  followup:  { label: 'Follow-up / Review Request', sub: 'Sent automatically after the appointment', timing: 'after' },
+};
+
+const VARS = '{{customer_name}} {{appointment_date}} {{appointment_time}} {{service_address}} {{products}} {{appointment_id}}';
+
+let templates = [];
+
+async function load() {
+  const res = await api('/admin/email-templates');
+  templates = await res.json();
+
+  document.getElementById('templates-wrap').innerHTML = templates.map(t => {
+    const info = TEMPLATE_INFO[t.key] || { label: t.key, sub: '', timing: false };
+    return `
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hdr">
+          <div>
+            <div class="card-hdr-title">${info.label}</div>
+            <div style="font-size:0.72rem;color:#8b949e;margin-top:2px">${info.sub}</div>
+          </div>
+          <label class="sw">
+            <input type="checkbox" data-key="${t.key}" data-field="enabled" ${t.enabled?'checked':''}>
+            <span class="sw-track"></span>
+          </label>
+        </div>
+        <div class="card-body">
+          ${info.timing ? `
+            <div class="form-group" style="max-width:280px">
+              <label>Send ${info.timing === 'before' ? 'X hours before' : 'X hours after'} appointment</label>
+              <input type="number" data-key="${t.key}" data-field="timing_hours" value="${t.timing_hours||48}" min="1" max="168">
+            </div>` : ''}
+          <div class="form-group">
+            <label>Subject</label>
+            <input type="text" data-key="${t.key}" data-field="subject" value="${escHtml(t.subject)}">
+          </div>
+          <div class="form-group" style="margin-bottom:4px">
+            <label>Body</label>
+            <textarea data-key="${t.key}" data-field="body" style="min-height:140px;font-family:monospace;font-size:0.78rem">${escHtml(t.body)}</textarea>
+          </div>
+          <div style="font-size:0.7rem;color:#484f58">Variables: <span style="font-family:monospace">${VARS}</span></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.saveAll = async function() {
+  for (const t of templates) {
+    const getVal = (field) => {
+      const el = document.querySelector(`[data-key="${t.key}"][data-field="${field}"]`);
+      if (!el) return null;
+      if (el.type === 'checkbox') return el.checked ? 1 : 0;
+      return el.value;
+    };
+    await api(`/admin/email-templates/${t.key}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        subject: getVal('subject'),
+        body: getVal('body'),
+        enabled: getVal('enabled') ?? t.enabled,
+        timing_hours: getVal('timing_hours') ? parseInt(getVal('timing_hours')) : t.timing_hours,
+      }),
+    });
+  }
+  toast('All templates saved');
+};
+
+window.toast = function(msg, err=false) {
+  const el = document.createElement('div');
+  el.className = `toast ${err?'toast-error':'toast-success'}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+};
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+load();
+</script>
+</body>
+</html>

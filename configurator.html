@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Configurator — SDC Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .group-card{background:#161b22;border:1px solid #21262d;border-radius:12px;margin-bottom:12px;overflow:hidden;cursor:pointer;transition:all 0.15s}
+    .group-card:hover{border-color:#388bfd;background:#1c2128}
+    .group-card-hdr{padding:16px 20px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between}
+    .group-name{font-size:0.92rem;font-weight:700}
+    .camera-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:#0d1117;border:1px solid #30363d;border-radius:6px;font-size:0.7rem;color:#8b949e;margin:2px}
+    .acc-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #21262d}
+    .acc-row:last-child{border-bottom:none}
+    .drag-handle{color:#484f58;cursor:grab;font-size:0.9rem;flex-shrink:0;margin-top:2px}
+    .channel-pill{padding:7px 16px;border-radius:8px;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid #30363d;background:#0d1117;color:#8b949e;transition:all 0.15s}
+    .channel-pill.active{border-color:#3fb950;background:#0d4a1e;color:#3fb950}
+    .tag-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#21262d;border:1px solid #30363d;border-radius:5px;font-size:0.7rem;color:#8b949e;margin:2px}
+    .tag-pill button{background:none;border:none;color:#484f58;cursor:pointer;padding:0;line-height:1;font-size:0.9rem}
+    .tag-pill button:hover{color:#f85149}
+    .upsell-block{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:14px;margin-bottom:10px}
+    .sw-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #21262d}
+    .sw-row:last-child{border-bottom:none}
+  </style>
+</head>
+<body>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Product Configurator</div>
+      <div class="topbar-sub">Option Groups &amp; Camera Assignments</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-secondary btn-sm" onclick="showCameraView()">Assign Cameras</button>
+      <button class="btn btn-primary btn-sm" onclick="openGroupModal(null)">+ New Group</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Groups view -->
+    <div id="view-groups">
+      <div class="notice">Each Option Group defines accessories and booking config for a set of cameras. Updating the group instantly updates all cameras assigned to it.</div>
+      <div id="groups-list"><div class="loading">Loading…</div></div>
+    </div>
+
+    <!-- Camera assignment view -->
+    <div id="view-cameras" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div style="font-size:0.92rem;font-weight:700">Camera Assignments</div>
+          <div style="font-size:0.74rem;color:#8b949e;margin-top:2px">Enter Shopify product IDs and assign them to option groups</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="showGroupView()">← Back to Groups</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start">
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-hdr-title">Assignments</div>
+            <button class="btn btn-primary btn-sm" onclick="openAssignModal()">+ Assign Camera</button>
+          </div>
+          <div id="assignments-table"><div class="loading">Loading…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">Groups</div></div>
+          <div id="groups-summary"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GROUP EDIT MODAL -->
+<div class="modal-backdrop hidden" id="group-modal">
+  <div class="modal" style="max-width:860px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="gm-title">New Group</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('group-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="step-tabs">
+        <div class="step-tab active" onclick="switchTab(0)">1 · Basics</div>
+        <div class="step-tab" onclick="switchTab(1)">2 · Required Acc.</div>
+        <div class="step-tab" onclick="switchTab(2)">3 · Optional Acc.</div>
+        <div class="step-tab" onclick="switchTab(3)">4 · Upsells</div>
+        <div class="step-tab" onclick="switchTab(4)">5 · Defaults &amp; Text</div>
+      </div>
+
+      <!-- Tab 1: Basics -->
+      <div class="step-panel active" id="gm-tab-0">
+        <div class="form-group"><label>Group Name</label><input type="text" id="gm-name" placeholder="e.g. BlackVue 2-Channel"></div>
+        <div class="form-group">
+          <label>Channel Count</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" id="gm-channels">
+            <div class="channel-pill" onclick="setChannel('1',this)">1-Channel</div>
+            <div class="channel-pill" onclick="setChannel('2',this)">2-Channel</div>
+            <div class="channel-pill" onclick="setChannel('3',this)">3-Channel</div>
+            <div class="channel-pill" onclick="setChannel('selector',this)">Channel Selector<br><small style="font-size:0.62rem;font-weight:400;opacity:0.7">BYO flow only</small></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px">
+            <div style="font-size:0.76rem;color:#484f58;white-space:nowrap">Links to non-inv SKU →</div>
+            <input type="text" id="gm-install-sku" placeholder="Shopify product ID for install labor" style="flex:1">
+            <div style="font-size:0.7rem;color:#484f58;white-space:nowrap">auto-added to cart</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Flow Type</label>
+          <select id="gm-flow">
+            <option value="standard">Standard Camera + Install / Ship</option>
+            <option value="byo">BYO Dash Cam Install</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Confirmation Turnaround</label>
+          <select id="gm-turnaround" style="max-width:280px">
+            <option value="12 business hours">12 business hours</option>
+            <option value="24 hours">24 hours</option>
+            <option value="1–2 business days">1–2 business days</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tab 2: Required Accessories -->
+      <div class="step-panel" id="gm-tab-1">
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+          <div><div style="font-size:0.82rem;font-weight:600">Block starts expanded on PDP</div><div style="font-size:0.7rem;color:#484f58">Collapsed by default if off</div></div>
+          <label class="sw"><input type="checkbox" id="gm-req-expanded" checked><span class="sw-track"></span></label>
+        </div>
+        <div id="gm-req-list"></div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addAccessoryRow('req')">+ Add Shopify Product</button>
+      </div>
+
+      <!-- Tab 3: Optional Accessories -->
+      <div class="step-panel" id="gm-tab-2">
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+          <div><div style="font-size:0.82rem;font-weight:600">Block starts expanded on PDP</div><div style="font-size:0.7rem;color:#484f58">Collapsed by default if off</div></div>
+          <label class="sw"><input type="checkbox" id="gm-opt-expanded"><span class="sw-track"></span></label>
+        </div>
+        <div id="gm-opt-list"></div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addAccessoryRow('opt')">+ Add Shopify Product</button>
+      </div>
+
+      <!-- Tab 4: Upsells -->
+      <div class="step-panel" id="gm-tab-3">
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+          <div><div style="font-size:0.82rem;font-weight:600">Block starts expanded on PDP</div></div>
+          <label class="sw"><input type="checkbox" id="gm-upsell-expanded" checked><span class="sw-track"></span></label>
+        </div>
+        <div id="gm-upsell-list"></div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:4px" onclick="addUpsellRow()">+ Add Upsell</button>
+      </div>
+
+      <!-- Tab 5: Defaults & WTE -->
+      <div class="step-panel" id="gm-tab-4">
+        <div class="form-group">
+          <label>Block Visibility on PDP</label>
+          <div style="background:#0d1117;border:1px solid #21262d;border-radius:10px;overflow:hidden">
+            <div class="sw-row"><div><div style="font-size:0.82rem">Required Accessories block visible</div></div><label class="sw"><input type="checkbox" id="gm-req-vis" checked><span class="sw-track"></span></label></div>
+            <div class="sw-row"><div><div style="font-size:0.82rem">Optional Accessories block visible</div></div><label class="sw"><input type="checkbox" id="gm-opt-vis" checked><span class="sw-track"></span></label></div>
+            <div class="sw-row"><div><div style="font-size:0.82rem">Upsells block visible</div></div><label class="sw"><input type="checkbox" id="gm-upsell-vis" checked><span class="sw-track"></span></label></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="form-group">
+          <label>"What to Expect" content <span style="font-weight:400;color:#484f58">(collapsible section below CTA)</span></label>
+          <textarea id="gm-wte" style="min-height:180px;font-family:monospace;font-size:0.8rem"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('group-modal')">Cancel</button>
+      <button class="btn btn-danger btn-sm" style="margin-right:auto" id="gm-delete-btn" onclick="deleteGroup()" style="display:none">Delete Group</button>
+      <button class="btn btn-primary" onclick="saveGroup()">Save Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASSIGN CAMERA MODAL -->
+<div class="modal-backdrop hidden" id="assign-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-hdr">
+      <div class="modal-title">Assign Camera to Group</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('assign-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Shopify Product ID</label><input type="text" id="assign-pid" placeholder="gid://shopify/Product/123456789"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Option Group</label>
+        <select id="assign-gid">
+          <option value="">— Select group —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('assign-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAssignment()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, renderShell } from './shell.js';
+import { api } from './config.js';
+
+requireAuth();
+renderShell({ active: 'configurator' });
+
+let groups = [];
+let currentGroupId = null;
+let currentChannel = null;
+
+// ── Groups list ────────────────────────────────────────────────────────────
+
+async function loadGroups() {
+  const res = await api('/admin/groups');
+  groups = await res.json();
+
+  if (!groups.length) {
+    document.getElementById('groups-list').innerHTML = `<div class="empty"><div class="empty-title">No groups yet</div><div>Click "+ New Group" to create your first option group.</div></div>`;
+    return;
+  }
+
+  document.getElementById('groups-list').innerHTML = groups.map(g => `
+    <div class="group-card" onclick="openGroupModal('${g.id}')">
+      <div class="group-card-hdr">
+        <div>
+          <div class="group-name">${g.name}</div>
+          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="badge badge-blue">${g.channel_count}-Channel</span>
+            <span class="badge badge-gray">${g.flow_type}</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openGroupModal('${g.id}')">Edit</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── Group modal ────────────────────────────────────────────────────────────
+
+window.openGroupModal = async function(id) {
+  currentGroupId = id;
+  document.getElementById('gm-title').textContent = id ? 'Edit Group' : 'New Group';
+  document.getElementById('gm-delete-btn').style.display = id ? '' : 'none';
+  switchTab(0);
+
+  if (id) {
+    const res = await api(`/admin/groups/${id}`);
+    const g = await res.json();
+    document.getElementById('gm-name').value = g.name;
+    document.getElementById('gm-install-sku').value = g.install_sku_id || '';
+    document.getElementById('gm-flow').value = g.flow_type || 'standard';
+    document.getElementById('gm-turnaround').value = g.confirmation_turnaround || '12 business hours';
+    setChannel(g.channel_count, null);
+    document.getElementById('gm-req-expanded').checked = !!g.block_req_expanded;
+    document.getElementById('gm-opt-expanded').checked = !!g.block_opt_expanded;
+    document.getElementById('gm-upsell-expanded').checked = !!g.block_upsell_expanded;
+    document.getElementById('gm-req-vis').checked = !!g.block_req_visible;
+    document.getElementById('gm-opt-vis').checked = !!g.block_opt_visible;
+    document.getElementById('gm-upsell-vis').checked = !!g.block_upsell_visible;
+    document.getElementById('gm-wte').value = g.wte_content || '';
+    renderAccList('req', (g.accessories||[]).filter(a=>a.type==='required'));
+    renderAccList('opt', (g.accessories||[]).filter(a=>a.type==='optional'));
+    renderUpsellList(g.upsells||[]);
+  } else {
+    document.getElementById('gm-name').value = '';
+    document.getElementById('gm-install-sku').value = '';
+    document.getElementById('gm-wte').value = '';
+    document.querySelectorAll('.channel-pill').forEach(p => p.classList.remove('active'));
+    renderAccList('req', []);
+    renderAccList('opt', []);
+    renderUpsellList([]);
+  }
+
+  document.getElementById('group-modal').classList.remove('hidden');
+};
+
+window.setChannel = function(val, el) {
+  currentChannel = val;
+  document.querySelectorAll('.channel-pill').forEach(p => p.classList.remove('active'));
+  if (el) { el.classList.add('active'); return; }
+  document.querySelectorAll('.channel-pill').forEach(p => {
+    if (p.onclick?.toString().includes(`'${val}'`)) p.classList.add('active');
+  });
+};
+
+function renderAccList(type, items) {
+  const listEl = document.getElementById(`gm-${type}-list`);
+  listEl.innerHTML = items.map((a,i) => accRowHtml(type, a, i)).join('');
+}
+
+function accRowHtml(type, a, i) {
+  return `<div class="acc-row" data-type="${type}" data-idx="${i}">
+    <span class="drag-handle">⠿</span>
+    <div style="flex:1">
+      <div class="form-group" style="margin-bottom:6px"><label>Shopify Product ID</label>
+        <input type="text" class="acc-pid" value="${a.shopify_product_id||''}" placeholder="gid://shopify/Product/…">
+      </div>
+      <div class="form-group" style="margin-bottom:6px"><label>Default Variant ID</label>
+        <input type="text" class="acc-vid" value="${a.default_variant_id||''}" placeholder="gid://shopify/ProductVariant/…">
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        ${type==='required' ? `
+          <label class="sw"><input type="checkbox" class="acc-byo" ${a.byo_enabled?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO option</span></label>
+          <label class="sw"><input type="checkbox" class="acc-locked" ${a.is_locked?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Locked checkbox</span></label>
+        ` : `
+          <label class="sw"><input type="checkbox" class="acc-pre" ${a.preselected?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Pre-selected by default</span></label>
+        `}
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('.acc-row').remove()">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
+    </button>
+  </div>`;
+}
+
+window.addAccessoryRow = function(type) {
+  document.getElementById(`gm-${type}-list`).insertAdjacentHTML('beforeend', accRowHtml(type, {}, Date.now()));
+};
+
+function renderUpsellList(items) {
+  document.getElementById('gm-upsell-list').innerHTML = items.map(u => upsellRowHtml(u)).join('');
+}
+
+function upsellRowHtml(u) {
+  return `<div class="upsell-block">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:0.82rem;font-weight:700">${u.display_name||'New Upsell'}</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('.upsell-block').remove()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
+      </button>
+    </div>
+    <div class="form-row" style="margin-bottom:10px">
+      <div class="form-group" style="margin-bottom:0"><label>Display Name</label><input type="text" class="us-name" value="${u.display_name||''}"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Link Label (optional)</label><input type="text" class="us-link-label" value="${u.link_label||''}" placeholder="e.g. View subscription options"></div>
+    </div>
+    <div class="form-group"><label>Link URL (optional)</label><input type="text" class="us-link-url" value="${u.link_url||''}" placeholder="https://…"></div>
+    <div class="form-group"><label>Description</label><textarea class="us-desc" style="min-height:52px">${u.description||''}</textarea></div>
+    <div class="form-row">
+      <div class="form-group" style="margin-bottom:0"><label>Device SKU (Shopify product ID)</label><input type="text" class="us-device" value="${u.device_shopify_product_id||''}"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Labor SKU (non-inv product ID)</label><input type="text" class="us-labor" value="${u.labor_shopify_product_id||''}"></div>
+    </div>
+  </div>`;
+}
+
+window.addUpsellRow = function() {
+  document.getElementById('gm-upsell-list').insertAdjacentHTML('beforeend', upsellRowHtml({}));
+};
+
+window.saveGroup = async function() {
+  const accessories = [
+    ...[...document.querySelectorAll('#gm-req-list .acc-row')].map(row => ({
+      type: 'required',
+      shopify_product_id: row.querySelector('.acc-pid').value,
+      default_variant_id: row.querySelector('.acc-vid').value || null,
+      byo_enabled: row.querySelector('.acc-byo')?.checked ? 1 : 0,
+      is_locked: row.querySelector('.acc-locked')?.checked ? 1 : 0,
+      preselected: 0,
+    })),
+    ...[...document.querySelectorAll('#gm-opt-list .acc-row')].map(row => ({
+      type: 'optional',
+      shopify_product_id: row.querySelector('.acc-pid').value,
+      default_variant_id: row.querySelector('.acc-vid').value || null,
+      byo_enabled: 0, is_locked: 0,
+      preselected: row.querySelector('.acc-pre')?.checked ? 1 : 0,
+    })),
+  ].filter(a => a.shopify_product_id);
+
+  const upsells = [...document.querySelectorAll('#gm-upsell-list .upsell-block')].map(row => ({
+    display_name: row.querySelector('.us-name').value,
+    description: row.querySelector('.us-desc').value,
+    link_label: row.querySelector('.us-link-label').value || null,
+    link_url: row.querySelector('.us-link-url').value || null,
+    device_shopify_product_id: row.querySelector('.us-device').value,
+    labor_shopify_product_id: row.querySelector('.us-labor').value,
+  })).filter(u => u.display_name && u.device_shopify_product_id);
+
+  const body = {
+    name: document.getElementById('gm-name').value,
+    channel_count: currentChannel || '1',
+    install_sku_id: document.getElementById('gm-install-sku').value || null,
+    flow_type: document.getElementById('gm-flow').value,
+    confirmation_turnaround: document.getElementById('gm-turnaround').value,
+    block_req_visible: document.getElementById('gm-req-vis').checked ? 1 : 0,
+    block_req_expanded: document.getElementById('gm-req-expanded').checked ? 1 : 0,
+    block_opt_visible: document.getElementById('gm-opt-vis').checked ? 1 : 0,
+    block_opt_expanded: document.getElementById('gm-opt-expanded').checked ? 1 : 0,
+    block_upsell_visible: document.getElementById('gm-upsell-vis').checked ? 1 : 0,
+    block_upsell_expanded: document.getElementById('gm-upsell-expanded').checked ? 1 : 0,
+    wte_content: document.getElementById('gm-wte').value,
+    accessories,
+    upsells,
+  };
+
+  const res = currentGroupId
+    ? await api(`/admin/groups/${currentGroupId}`, { method:'PUT', body:JSON.stringify(body) })
+    : await api('/admin/groups', { method:'POST', body:JSON.stringify(body) });
+
+  if (res.ok) { toast('Group saved'); closeModal('group-modal'); loadGroups(); }
+  else toast('Error saving', true);
+};
+
+window.deleteGroup = async function() {
+  if (!confirm('Delete this group? Cameras will be unassigned.')) return;
+  await api(`/admin/groups/${currentGroupId}`, { method:'DELETE' });
+  toast('Deleted'); closeModal('group-modal'); loadGroups();
+};
+
+// ── Camera assignments ─────────────────────────────────────────────────────
+
+window.showCameraView = async function() {
+  document.getElementById('view-groups').style.display = 'none';
+  document.getElementById('view-cameras').style.display = '';
+  loadAssignments();
+};
+
+window.showGroupView = function() {
+  document.getElementById('view-cameras').style.display = 'none';
+  document.getElementById('view-groups').style.display = '';
+};
+
+async function loadAssignments() {
+  const [aRes, gRes] = await Promise.all([api('/admin/camera-assignments'), api('/admin/groups')]);
+  const assignments = await aRes.json();
+  groups = await gRes.json();
+
+  // Groups summary panel
+  const groupCounts = {};
+  assignments.forEach(a => { groupCounts[a.group_id] = (groupCounts[a.group_id]||0)+1; });
+  document.getElementById('groups-summary').innerHTML = groups.map(g => `
+    <div style="padding:10px 16px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:0.82rem;font-weight:600">${g.name}</div>
+      <span class="badge badge-blue">${groupCounts[g.id]||0} cameras</span>
+    </div>`).join('');
+
+  // Assignments table
+  if (!assignments.length) {
+    document.getElementById('assignments-table').innerHTML = '<div class="empty"><div class="empty-title">No cameras assigned yet</div></div>';
+    return;
+  }
+  document.getElementById('assignments-table').innerHTML = `
+    <table class="table">
+      <thead><tr><th>Product ID</th><th>Group</th><th></th></tr></thead>
+      <tbody>${assignments.map(a => `
+        <tr>
+          <td style="font-family:monospace;font-size:0.72rem">${a.shopify_product_id}</td>
+          <td>${a.group_name||'—'}</td>
+          <td><button class="btn btn-ghost btn-sm btn-icon" onclick="removeAssignment('${a.shopify_product_id}')">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
+          </button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+
+  // Populate assign modal group select
+  const sel = document.getElementById('assign-gid');
+  sel.innerHTML = '<option value="">— Select group —</option>' +
+    groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+}
+
+window.openAssignModal = () => document.getElementById('assign-modal').classList.remove('hidden');
+
+window.saveAssignment = async function() {
+  const pid = document.getElementById('assign-pid').value.trim();
+  const gid = document.getElementById('assign-gid').value;
+  if (!pid || !gid) return;
+  await api('/admin/camera-assignments', { method:'POST', body:JSON.stringify({ shopify_product_ids:[pid], group_id:gid }) });
+  toast('Assigned'); closeModal('assign-modal'); loadAssignments();
+};
+
+window.removeAssignment = async function(pid) {
+  if (!confirm('Remove this camera assignment?')) return;
+  await api('/admin/camera-assignments', { method:'DELETE', body:JSON.stringify({ shopify_product_id:pid }) });
+  toast('Removed'); loadAssignments();
+};
+
+// ── Tabs + helpers ─────────────────────────────────────────────────────────
+
+window.switchTab = function(idx) {
+  document.querySelectorAll('.step-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.step-panel').forEach((p,i) => p.classList.toggle('active', i===idx));
+};
+
+window.closeModal = function(id) { document.getElementById(id).classList.add('hidden'); };
+document.querySelectorAll('.modal-backdrop').forEach(b => b.addEventListener('click', e => { if(e.target===b) b.classList.add('hidden'); }));
+
+window.toast = function(msg, err=false) {
+  const el = document.createElement('div');
+  el.className = `toast ${err?'toast-error':'toast-success'}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+};
+
+loadGroups();
+</script>
+</body>
+</html>

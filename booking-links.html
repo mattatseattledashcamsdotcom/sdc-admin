@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Links — SDC Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .acc-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #21262d}
+    .acc-row:last-child{border-bottom:none}
+    .acc-chk{width:18px;height:18px;border:2px solid #30363d;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;cursor:pointer;transition:all 0.15s;font-size:0.7rem;user-select:none}
+    .acc-chk.on{background:#238636;border-color:#2ea043;color:#fff}
+    .acc-chk.locked{background:#161b22;border-color:#21262d;color:#484f58;cursor:default}
+    .link-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px 14px;font-family:monospace;font-size:0.72rem;color:#3fb950;word-break:break-all;line-height:1.7;min-height:48px}
+    .history-row{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid #21262d;font-size:0.78rem}
+    .history-row:last-child{border-bottom:none}
+  </style>
+</head>
+<body>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Booking Links</div>
+      <div class="topbar-sub">Generate pre-configured links for phone and in-person quotes</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="notice">
+      Build a link with exactly what you discussed on the phone — camera, accessories, notes. Customer opens it, everything is pre-loaded, they enter ZIP and pick a date.
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start">
+      <!-- Builder -->
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hdr"><div class="card-hdr-title">1 · Pick a Group &amp; Camera</div></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Option Group</label>
+                <select id="group-select" onchange="onGroupChange()">
+                  <option value="">— Select group —</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>Camera (Shopify product ID)</label>
+                <input type="text" id="product-id" placeholder="gid://shopify/Product/123…" oninput="buildLink()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px" id="acc-card">
+          <div class="card-hdr"><div class="card-hdr-title">2 · Accessories</div></div>
+          <div class="card-body" id="acc-body">
+            <div style="color:#484f58;font-size:0.78rem">Select a group first.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">3 · Notes for Customer <span style="font-weight:400;color:#484f58;font-size:0.72rem;margin-left:4px">(optional)</span></div></div>
+          <div class="card-body">
+            <textarea id="notes" placeholder="e.g. Hey John — here's the link we discussed…" style="min-height:72px" oninput="buildLink()"></textarea>
+            <div style="margin-top:6px;font-size:0.72rem;color:#484f58">Shown as a callout at the top of the page when the customer opens the link.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary + link -->
+      <div style="position:sticky;top:80px">
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-hdr"><div class="card-hdr-title">Generated Link</div></div>
+          <div class="card-body">
+            <div class="link-box" id="link-display">Select a group and camera to generate a link.</div>
+            <div style="margin-top:12px;display:flex;gap:8px">
+              <button class="btn btn-primary" style="flex:1" onclick="copyLink()">📋 Copy Link</button>
+              <button class="btn btn-secondary" style="flex:1" onclick="smsLink()">💬 SMS</button>
+            </div>
+            <div style="margin-top:8px">
+              <button class="btn btn-ghost btn-sm" style="width:100%" onclick="emailLink()">✉️ Open in Mail</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, renderShell } from './shell.js';
+import { api, WORKER_URL } from './config.js';
+
+requireAuth();
+renderShell({ active: 'booking-links' });
+
+let groups = [];
+let currentGroup = null;
+let optionalSelections = {};
+
+async function load() {
+  const res = await api('/admin/groups');
+  groups = await res.json();
+  const sel = document.getElementById('group-select');
+  groups.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    sel.appendChild(opt);
+  });
+}
+
+window.onGroupChange = async function() {
+  const id = document.getElementById('group-select').value;
+  if (!id) { currentGroup = null; renderAccessories(); buildLink(); return; }
+  const res = await api(`/admin/groups/${id}`);
+  currentGroup = await res.json();
+  optionalSelections = {};
+  // Pre-select optional accessories that are preselected by default
+  (currentGroup.accessories || []).filter(a => a.type === 'optional' && a.preselected).forEach(a => {
+    optionalSelections[a.id] = true;
+  });
+  renderAccessories();
+  buildLink();
+};
+
+function renderAccessories() {
+  const body = document.getElementById('acc-body');
+  if (!currentGroup) { body.innerHTML = '<div style="color:#484f58;font-size:0.78rem">Select a group first.</div>'; return; }
+
+  const req = (currentGroup.accessories || []).filter(a => a.type === 'required');
+  const opt = (currentGroup.accessories || []).filter(a => a.type === 'optional');
+
+  body.innerHTML = `
+    ${req.length ? `
+      <div style="font-size:0.74rem;font-weight:700;color:#484f58;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Required <span style="font-weight:400;color:#21262d;margin-left:4px">— customer can BYO</span></div>
+      ${req.map(a => `
+        <div class="acc-row">
+          <div class="acc-chk locked">✓</div>
+          <div style="flex:1">
+            <div style="font-size:0.82rem;font-weight:600">${a.shopify_product_id}</div>
+            <div style="font-size:0.7rem;color:#484f58">Variant: ${a.default_variant_id || 'default'}</div>
+          </div>
+        </div>`).join('')}
+    ` : ''}
+    ${opt.length ? `
+      <div style="font-size:0.74rem;font-weight:700;color:#484f58;text-transform:uppercase;letter-spacing:0.06em;margin:${req.length?'16px':0} 0 8px">Optional <span style="font-weight:400;margin-left:4px">— toggle to pre-select</span></div>
+      ${opt.map(a => `
+        <div class="acc-row">
+          <div class="acc-chk ${optionalSelections[a.id]?'on':''}" onclick="toggleOpt('${a.id}',this)">✓</div>
+          <div style="flex:1">
+            <div style="font-size:0.82rem;font-weight:600">${a.shopify_product_id}</div>
+          </div>
+        </div>`).join('')}
+    ` : ''}
+    ${!req.length && !opt.length ? '<div style="color:#484f58;font-size:0.78rem">No accessories configured for this group.</div>' : ''}
+  `;
+}
+
+window.toggleOpt = function(id, el) {
+  optionalSelections[id] = !optionalSelections[id];
+  el.classList.toggle('on', optionalSelections[id]);
+  buildLink();
+};
+
+window.buildLink = function() {
+  const productId = document.getElementById('product-id').value.trim();
+  const groupId = document.getElementById('group-select').value;
+  const notes = document.getElementById('notes').value.trim();
+
+  if (!productId || !groupId) {
+    document.getElementById('link-display').textContent = 'Select a group and camera to generate a link.';
+    return;
+  }
+
+  const params = new URLSearchParams({ cfg: groupId });
+  const preselected = Object.entries(optionalSelections).filter(([,v])=>v).map(([k])=>k);
+  if (preselected.length) params.set('opt', preselected.join(','));
+  if (notes) params.set('note', notes);
+
+  // In production this would be the actual Shopify product URL
+  const link = `https://seattledashcams.com/products/${productId}?${params}`;
+  document.getElementById('link-display').textContent = link;
+};
+
+window.copyLink = function() {
+  const link = document.getElementById('link-display').textContent;
+  if (link.includes('Select a')) return;
+  navigator.clipboard.writeText(link).catch(()=>{});
+  toast('Copied!');
+};
+
+window.smsLink = function() {
+  const link = document.getElementById('link-display').textContent;
+  window.open('sms:?body=' + encodeURIComponent(link));
+};
+
+window.emailLink = function() {
+  const link = document.getElementById('link-display').textContent;
+  const subj = encodeURIComponent('Your Seattle Dash Cams booking link');
+  const body = encodeURIComponent('Hi — here\'s the link for the setup we discussed:\n\n' + link + '\n\nLet me know if you have any questions!');
+  window.open(`mailto:?subject=${subj}&body=${body}`);
+};
+
+window.toast = function(msg, err=false) {
+  const el = document.createElement('div');
+  el.className = `toast ${err?'toast-error':'toast-success'}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2400);
+};
+
+load();
+</script>
+</body>
+</html>

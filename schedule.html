@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schedule Editor — SDC Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .slot-card{background:#161b22;border:1px solid #21262d;border-radius:12px;margin-bottom:12px;overflow:hidden}
+    .slot-card-hdr{padding:14px 20px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+    .slot-card-hdr:hover{background:#1c2128}
+    .slot-card-title{font-size:0.88rem;font-weight:700;display:flex;align-items:center;gap:10px}
+    .slot-body{display:none;padding:20px}
+    .slot-body.open{display:block}
+    .chevron{font-size:0.7rem;color:#484f58;transition:transform 0.2s;margin-left:4px}
+    .chevron.open{transform:rotate(180deg)}
+    .pattern-row{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:14px;margin-bottom:8px}
+    .pattern-label{font-size:0.78rem;font-weight:700;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:3px 10px;min-width:60px;text-align:center;display:inline-block}
+    .zip-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#161b22;border:1px solid #30363d;border-radius:5px;font-size:0.72rem;color:#8b949e;margin:2px}
+    .zip-tag button{background:none;border:none;color:#484f58;cursor:pointer;font-size:0.8rem;line-height:1}
+    .zip-tag button:hover{color:#f85149}
+    .day-pill{padding:5px 10px;border-radius:6px;font-size:0.74rem;font-weight:700;cursor:pointer;border:1.5px solid #30363d;background:#0d1117;color:#484f58;transition:all 0.15s}
+    .day-pill.on{border-color:#3fb950;background:#0d4a1e;color:#3fb950}
+  </style>
+</head>
+<body>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Schedule Editor</div>
+      <div class="topbar-sub">Time slots, ZIP patterns, block dates, week overrides</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" onclick="openNewSlot()">+ New Slot</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <button class="btn btn-secondary btn-sm active-tab" id="tab-slots" onclick="showTab('slots')">Time Slots</button>
+      <button class="btn btn-ghost btn-sm" id="tab-blocks" onclick="showTab('blocks')">Block Dates</button>
+      <button class="btn btn-ghost btn-sm" id="tab-overrides" onclick="showTab('overrides')">Week Overrides</button>
+      <button class="btn btn-ghost btn-sm" id="tab-settings" onclick="showTab('settings')">Settings</button>
+    </div>
+
+    <!-- SLOTS -->
+    <div id="panel-slots">
+      <div id="slots-list"><div class="loading">Loading…</div></div>
+    </div>
+
+    <!-- BLOCK DATES -->
+    <div id="panel-blocks" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+        <button class="btn btn-primary btn-sm" onclick="openBlockModal()">+ Add Block</button>
+      </div>
+      <div class="card" id="blocks-list"><div class="loading">Loading…</div></div>
+    </div>
+
+    <!-- WEEK OVERRIDES -->
+    <div id="panel-overrides" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+        <button class="btn btn-primary btn-sm" onclick="openOverrideModal()">+ Add Override</button>
+      </div>
+      <div class="card" id="overrides-list"><div class="loading">Loading…</div></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="panel-settings" style="display:none;max-width:520px">
+      <div class="card">
+        <div class="card-hdr"><div class="card-hdr-title">Booking Window</div></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Minimum lead time (hours)</label>
+              <input type="number" id="s-lead" min="1" max="72">
+            </div>
+            <div class="form-group">
+              <label>Maximum booking window (days)</label>
+              <input type="number" id="s-window" min="7" max="180">
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveSettings()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLOT MODAL -->
+<div class="modal-backdrop hidden" id="slot-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="slot-modal-title">New Time Slot</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('slot-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="slot-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('slot-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSlot()">Save Slot</button>
+    </div>
+  </div>
+</div>
+
+<!-- BLOCK MODAL -->
+<div class="modal-backdrop hidden" id="block-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hdr">
+      <div class="modal-title">Block Dates</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('block-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Label (optional)</label><input type="text" id="b-label" placeholder="e.g. Independence Day"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date</label><input type="date" id="b-start"></div>
+        <div class="form-group"><label>End Date</label><input type="date" id="b-end"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('block-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBlock()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERRIDE MODAL -->
+<div class="modal-backdrop hidden" id="override-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr">
+      <div class="modal-title">Week Override</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('override-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Week of (any date in that week)</label><input type="date" id="o-week"></div>
+      <div class="form-group">
+        <label>ZIPs for this week</label>
+        <div id="o-zip-tags" style="margin-bottom:6px"></div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="o-zip-input" placeholder="Add ZIP…" maxlength="5" style="max-width:120px" onkeydown="if(event.key==='Enter')addOverrideZip()">
+          <button class="btn btn-ghost btn-sm" onclick="addOverrideZip()">Add</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label>Note (optional)</label><input type="text" id="o-note" placeholder="Why the override?"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('override-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveOverride()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, renderShell } from './shell.js';
+import { api } from './config.js';
+
+requireAuth();
+renderShell({ active: 'schedule' });
+
+const DAYS = ['sun','mon','tue','wed','thu','fri','sat'];
+const DAY_LABELS = { sun:'Sun', mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'Fri', sat:'Sat' };
+
+let scheduleData = { slots:[], patterns:[], anchors:[] };
+let currentSlotId = null;
+let overrideZips = [];
+
+window.showTab = function(name) {
+  ['slots','blocks','overrides','settings'].forEach(t => {
+    document.getElementById('panel-'+t).style.display = t===name ? '' : 'none';
+    const btn = document.getElementById('tab-'+t);
+    btn.className = t===name ? 'btn btn-secondary btn-sm' : 'btn btn-ghost btn-sm';
+  });
+  if (name === 'slots') loadSlots();
+  if (name === 'blocks') loadBlocks();
+  if (name === 'overrides') loadOverrides();
+  if (name === 'settings') loadSettings();
+};
+
+async function loadSlots() {
+  const res = await api('/admin/slots');
+  scheduleData = await res.json();
+  const { slots, patterns, anchors } = scheduleData;
+
+  if (!slots.length) {
+    document.getElementById('slots-list').innerHTML = `<div class="empty"><div class="empty-title">No slots yet</div><div>Click "+ New Slot" to add your first time slot.</div></div>`;
+    return;
+  }
+
+  document.getElementById('slots-list').innerHTML = slots.map(slot => {
+    const days = JSON.parse(slot.days_of_week).map(d => DAY_LABELS[d]).join(' & ');
+    const slotPatterns = patterns.filter(p => p.slot_id === slot.id);
+    const anchor = anchors.find(a => a.slot_id === slot.id);
+    return `
+      <div class="slot-card">
+        <div class="slot-card-hdr" onclick="toggleSlot('${slot.id}')">
+          <div class="slot-card-title">
+            <span>${days} · ${formatTime(slot.start_time)}–${formatTime(slot.end_time)}</span>
+            <span class="badge badge-blue">${slotPatterns.length} pattern${slotPatterns.length!==1?'s':''}</span>
+            <span class="badge badge-green">Cap: ${slot.capacity}</span>
+            ${!slot.enabled ? '<span class="badge badge-gray">Disabled</span>' : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:10px" onclick="event.stopPropagation()">
+            <label class="sw"><input type="checkbox" ${slot.enabled?'checked':''} onchange="toggleEnabled('${slot.id}',this.checked)"><span class="sw-track"></span></label>
+            <button class="btn btn-ghost btn-sm" onclick="openEditSlot('${slot.id}')">Edit</button>
+            <span class="chevron" id="chevron-${slot.id}">▼</span>
+          </div>
+        </div>
+        <div class="slot-body" id="slotbody-${slot.id}">
+          ${slotPatterns.map(p => `
+            <div class="pattern-row">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <span class="pattern-label">Week ${p.week_label}</span>
+              </div>
+              <div>${JSON.parse(p.zips).map(z => `<span class="zip-tag">${z}</span>`).join('')}</div>
+            </div>`).join('')}
+          ${anchor ? `<div style="font-size:0.72rem;color:#484f58;margin-top:8px">Cycle anchor: Week A starts ${anchor.anchor_date}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.toggleSlot = function(id) {
+  const body = document.getElementById('slotbody-'+id);
+  const ch = document.getElementById('chevron-'+id);
+  const open = body.classList.toggle('open');
+  ch.classList.toggle('open', open);
+};
+
+window.toggleEnabled = async function(id, enabled) {
+  const slot = scheduleData.slots.find(s => s.id === id);
+  if (!slot) return;
+  await api(`/admin/slots/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...slot, days_of_week: JSON.parse(slot.days_of_week), enabled: enabled ? 1 : 0,
+      patterns: scheduleData.patterns.filter(p=>p.slot_id===id).map(p=>({...p, zips:JSON.parse(p.zips)})) }),
+  });
+};
+
+window.openNewSlot = function() {
+  currentSlotId = null;
+  renderSlotForm(null, [], null);
+  document.getElementById('slot-modal-title').textContent = 'New Time Slot';
+  document.getElementById('slot-modal').classList.remove('hidden');
+};
+
+window.openEditSlot = function(id) {
+  currentSlotId = id;
+  const slot = scheduleData.slots.find(s => s.id === id);
+  const patterns = scheduleData.patterns.filter(p => p.slot_id === id);
+  const anchor = scheduleData.anchors.find(a => a.slot_id === id);
+  renderSlotForm(slot, patterns, anchor);
+  document.getElementById('slot-modal-title').textContent = 'Edit Time Slot';
+  document.getElementById('slot-modal').classList.remove('hidden');
+};
+
+function renderSlotForm(slot, patterns, anchor) {
+  const selectedDays = slot ? JSON.parse(slot.days_of_week) : [];
+  document.getElementById('slot-modal-body').innerHTML = `
+    <div class="form-group">
+      <label>Days of Week</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="day-pills">
+        ${['mon','tue','wed','thu','fri'].map(d => `
+          <div class="day-pill ${selectedDays.includes(d)?'on':''}" data-day="${d}" onclick="this.classList.toggle('on')">${DAY_LABELS[d]}</div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Start Time</label>
+        <select id="f-start">
+          ${['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00'].map(t =>
+            `<option value="${t}" ${slot?.start_time===t?'selected':''}>${formatTime(t)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label>End Time</label>
+        <select id="f-end">
+          ${['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'].map(t =>
+            `<option value="${t}" ${slot?.end_time===t?'selected':''}>${formatTime(t)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Max Bookings Per Slot</label><input type="number" id="f-cap" value="${slot?.capacity||1}" min="1" max="10"></div>
+      <div class="form-group"><label>Cycle Anchor Date <span style="font-weight:400;color:#484f58">(= Week A)</span></label>
+        <input type="date" id="f-anchor" value="${anchor?.anchor_date||''}">
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:0.82rem;font-weight:700">ZIP Patterns</div>
+      <button class="btn btn-ghost btn-sm" onclick="addPatternRow()">+ Add Pattern</button>
+    </div>
+    <div id="pattern-rows">
+      ${patterns.map((p,i) => patternRowHtml(p.week_label, JSON.parse(p.zips))).join('')}
+    </div>
+    ${slot ? `<div class="divider"></div><button class="btn btn-danger btn-sm" onclick="deleteSlot('${slot.id}')">Delete Slot</button>` : ''}
+  `;
+}
+
+const LETTERS = 'ABCDEFGH';
+function patternRowHtml(label, zips) {
+  return `<div class="pattern-row" data-label="${label}">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span class="pattern-label">Week ${label}</span>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('.pattern-row').remove()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
+      </button>
+    </div>
+    <div class="zip-tags-container">${zips.map(z => `<span class="zip-tag">${z} <button onclick="this.parentElement.remove()">×</button></span>`).join('')}</div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input type="text" class="zip-add-input" placeholder="Add ZIP…" maxlength="5" style="max-width:110px;font-size:0.78rem;padding:5px 8px" onkeydown="if(event.key==='Enter'){addZipToRow(this);event.preventDefault()}">
+      <button class="btn btn-ghost btn-sm" onclick="addZipToRow(this.previousElementSibling)">Add</button>
+    </div>
+  </div>`;
+}
+
+window.addPatternRow = function() {
+  const rows = document.querySelectorAll('#pattern-rows .pattern-row');
+  const label = LETTERS[rows.length] || '?';
+  document.getElementById('pattern-rows').insertAdjacentHTML('beforeend', patternRowHtml(label, []));
+};
+
+window.addZipToRow = function(input) {
+  const val = input.value.trim();
+  if (!/^\d{5}$/.test(val)) return;
+  const container = input.closest('.pattern-row').querySelector('.zip-tags-container');
+  container.insertAdjacentHTML('beforeend', `<span class="zip-tag">${val} <button onclick="this.parentElement.remove()">×</button></span>`);
+  input.value = '';
+};
+
+window.saveSlot = async function() {
+  const days = [...document.querySelectorAll('#day-pills .day-pill.on')].map(el => el.dataset.day);
+  const patterns = [...document.querySelectorAll('#pattern-rows .pattern-row')].map(row => ({
+    week_label: row.dataset.label,
+    zips: [...row.querySelectorAll('.zip-tag')].map(el => el.textContent.replace('×','').trim()),
+  }));
+  const body = {
+    days_of_week: days,
+    start_time: document.getElementById('f-start').value,
+    end_time: document.getElementById('f-end').value,
+    capacity: parseInt(document.getElementById('f-cap').value),
+    anchor_date: document.getElementById('f-anchor').value || null,
+    enabled: 1,
+    patterns,
+  };
+  const res = currentSlotId
+    ? await api(`/admin/slots/${currentSlotId}`, { method:'PUT', body:JSON.stringify(body) })
+    : await api('/admin/slots', { method:'POST', body:JSON.stringify(body) });
+  if (res.ok) { toast('Saved'); closeModal('slot-modal'); loadSlots(); }
+  else toast('Error saving', true);
+};
+
+window.deleteSlot = async function(id) {
+  if (!confirm('Delete this slot?')) return;
+  await api(`/admin/slots/${id}`, { method:'DELETE' });
+  toast('Deleted'); closeModal('slot-modal'); loadSlots();
+};
+
+async function loadBlocks() {
+  const res = await api('/admin/block-dates');
+  const blocks = await res.json();
+  if (!blocks.length) {
+    document.getElementById('blocks-list').innerHTML = '<div class="empty"><div class="empty-title">No blocked dates</div></div>';
+    return;
+  }
+  document.getElementById('blocks-list').innerHTML = blocks.map(b => `
+    <div style="padding:12px 20px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:0.82rem;font-weight:600">${b.start_date === b.end_date ? b.start_date : `${b.start_date} – ${b.end_date}`}</div>
+        ${b.label ? `<div style="font-size:0.72rem;color:#8b949e">${b.label}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:8px">
+        <span class="badge badge-red">Blocked</span>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="deleteBlock('${b.id}')">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+window.openBlockModal = () => document.getElementById('block-modal').classList.remove('hidden');
+
+window.saveBlock = async function() {
+  const res = await api('/admin/block-dates', { method:'POST', body:JSON.stringify({
+    label: document.getElementById('b-label').value,
+    start_date: document.getElementById('b-start').value,
+    end_date: document.getElementById('b-end').value || document.getElementById('b-start').value,
+  })});
+  if (res.ok) { toast('Saved'); closeModal('block-modal'); loadBlocks(); }
+  else toast('Error', true);
+};
+
+window.deleteBlock = async function(id) {
+  if (!confirm('Remove this block date?')) return;
+  await api(`/admin/block-dates/${id}`, { method:'DELETE' });
+  toast('Removed'); loadBlocks();
+};
+
+async function loadOverrides() {
+  const res = await api('/admin/week-overrides');
+  const overrides = await res.json();
+  if (!overrides.length) {
+    document.getElementById('overrides-list').innerHTML = '<div class="empty"><div class="empty-title">No week overrides</div></div>';
+    return;
+  }
+  document.getElementById('overrides-list').innerHTML = overrides.map(o => `
+    <div style="padding:14px 20px;border-bottom:1px solid #21262d;display:flex;gap:12px;align-items:flex-start">
+      <div style="flex:1">
+        <div style="font-size:0.82rem;font-weight:700;margin-bottom:4px">Week of ${o.week_of}</div>
+        ${o.note ? `<div style="font-size:0.72rem;color:#8b949e;margin-bottom:6px">${o.note}</div>` : ''}
+        <div>${JSON.parse(o.zips).map(z => `<span class="zip-tag">${z}</span>`).join('')}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <span class="badge badge-orange">Override</span>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="deleteOverride('${o.id}')">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+window.openOverrideModal = function() {
+  overrideZips = [];
+  document.getElementById('o-zip-tags').innerHTML = '';
+  document.getElementById('override-modal').classList.remove('hidden');
+};
+
+window.addOverrideZip = function() {
+  const input = document.getElementById('o-zip-input');
+  const val = input.value.trim();
+  if (!/^\d{5}$/.test(val) || overrideZips.includes(val)) return;
+  overrideZips.push(val);
+  const tag = document.createElement('span');
+  tag.className = 'zip-tag';
+  tag.innerHTML = `${val} <button onclick="this.parentElement.remove();overrideZips=overrideZips.filter(z=>z!=='${val}')">×</button>`;
+  document.getElementById('o-zip-tags').appendChild(tag);
+  input.value = '';
+};
+
+window.saveOverride = async function() {
+  const res = await api('/admin/week-overrides', { method:'POST', body:JSON.stringify({
+    week_of: document.getElementById('o-week').value,
+    zips: overrideZips,
+    note: document.getElementById('o-note').value,
+  })});
+  if (res.ok) { toast('Saved'); closeModal('override-modal'); loadOverrides(); }
+  else toast('Error', true);
+};
+
+window.deleteOverride = async function(id) {
+  if (!confirm('Remove this override?')) return;
+  await api(`/admin/week-overrides/${id}`, { method:'DELETE' });
+  toast('Removed'); loadOverrides();
+};
+
+async function loadSettings() {
+  const res = await api('/admin/settings');
+  const s = await res.json();
+  document.getElementById('s-lead').value = s.min_lead_hours || 2;
+  document.getElementById('s-window').value = s.max_booking_days || 60;
+}
+
+window.saveSettings = async function() {
+  await api('/admin/settings', { method:'PUT', body:JSON.stringify({
+    min_lead_hours: document.getElementById('s-lead').value,
+    max_booking_days: document.getElementById('s-window').value,
+  })});
+  toast('Settings saved');
+};
+
+window.closeModal = function(id) { document.getElementById(id).classList.add('hidden'); };
+document.querySelectorAll('.modal-backdrop').forEach(b => b.addEventListener('click', e => { if(e.target===b) b.classList.add('hidden'); }));
+
+window.toast = function(msg, err=false) {
+  const el = document.createElement('div');
+  el.className = `toast ${err?'toast-error':'toast-success'}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+};
+
+function formatTime(t) {
+  const [h,m] = t.split(':');
+  const hr = parseInt(h);
+  return `${hr>12?hr-12:hr||12}:${m} ${hr>=12?'PM':'AM'}`;
+}
+
+const DAY_LABELS = { sun:'Sun', mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'Fri', sat:'Sat' };
+window.overrideZips = overrideZips;
+
+loadSlots();
+</script>
+</body>
+</html>
