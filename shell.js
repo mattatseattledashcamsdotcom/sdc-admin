@@ -16,14 +16,13 @@ export function renderShell({ active }) {
     { id: 'schedule', label: 'Schedule Editor', href: 'schedule.html', icon: `<circle cx="8" cy="8" r="6"/><path d="M8 4.5v3.5l2.5 2"/>` },
     { id: 'reminders', label: 'Reminders', href: 'reminders.html', icon: `<path d="M13 3l-1.5 5H10L8.5 13 6 7H4.5L3 3"/>` },
     { id: 'followups', label: 'Follow-ups', href: 'followups.html', icon: `<path d="M2 11l4-4 3 3 5-6"/>` },
-    { id: 'booking-links', label: 'Booking Links', href: 'booking-links.html', icon: `<path d="M10 3H3a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V6l-4-3z"/><path d="M10 3v3h3"/>` },
   ];
 
   const sections = {
     'Bookings': ['appointments'],
     'Catalog': ['configurator'],
     'Scheduling': ['schedule'],
-    'Automation': ['reminders', 'followups', 'booking-links'],
+    'Automation': ['reminders', 'followups'],
   };
 
   let sidebarHtml = '';
