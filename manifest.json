@@ -8,14 +8,14 @@
   "theme_color": "#161b22",
   "icons": [
     {
-      "src": "https://cdn.shopify.com/s/files/1/0656/4946/6161/files/sdc-icon-192.png",
+      "src": "https://cdn.shopify.com/s/files/1/0629/6456/4045/files/cropped-Seattle-Dash-Cams-JPG-2-2-192x192.jpg?v=1749206377",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/jpeg"
     },
     {
-      "src": "https://cdn.shopify.com/s/files/1/0656/4946/6161/files/sdc-icon-512.png",
+      "src": "https://cdn.shopify.com/s/files/1/0629/6456/4045/files/cropped-Seattle-Dash-Cams-JPG-2-2-192x192.jpg?v=1749206377",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/jpeg"
     }
   ]
 }
