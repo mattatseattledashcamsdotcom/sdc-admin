@@ -419,6 +419,20 @@ function accRowHtml(type, a, i) {
           <input type="text" class="acc-note" value="${a.note||''}" placeholder="e.g. Customer must provide their own SSD">
         </div>
       </div>
+      <div class="form-row" style="margin-bottom:6px">
+        <div class="form-group" style="margin-bottom:0"><label>Brand Filter</label>
+          <select class="acc-brand-filter" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
+            <option value="">All brands (always show)</option>
+            <option${a.brand_filter==='VIOFO'?' selected':''}>VIOFO</option>
+            <option${a.brand_filter==='Vueroid'?' selected':''}>Vueroid</option>
+            <option${a.brand_filter==='Thinkware'?' selected':''}>Thinkware</option>
+            <option${a.brand_filter==='BlackVue'?' selected':''}>BlackVue</option>
+            <option${a.brand_filter==='Vantrue'?' selected':''}>Vantrue</option>
+            <option${a.brand_filter==='70mai'?' selected':''}>70mai</option>
+            <option${a.brand_filter==='Fitcam'?' selected':''}>Fitcam</option>
+          </select>
+        </div>
+      </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
         <label class="sw"><input type="checkbox" class="acc-pre" ${a.preselected?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Pre-selected by default</span></label>
       </div>
@@ -499,6 +513,7 @@ window.saveGroup = async function() {
       section_label: null,
       note: row.querySelector('.acc-note')?.value.trim() || null,
       byo_enabled: 0, is_locked: 0,
+      brand_filter: row.querySelector('.acc-brand-filter')?.value || null,
       preselected: row.querySelector('.acc-pre')?.checked ? 1 : 0,
     })),
   ].filter(a => a.shopify_product_id);
