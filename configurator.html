@@ -328,18 +328,20 @@ function renderAccList(type, items) {
       if (!sectionMap.has(label)) sectionMap.set(label, { products: [], flags: a });
       sectionMap.get(label).products.push(a);
     });
-    listEl.innerHTML = [...sectionMap.entries()].map(([label, { products, flags }]) =>
-      reqSectionHtml(label, products, flags)
+    const sectionAccents = ['#388bfd','#3fb950','#f0883e','#bc8cff','#58a6ff','#56d364'];
+    listEl.innerHTML = [...sectionMap.entries()].map(([label, { products, flags }], idx) =>
+      reqSectionHtml(label, products, flags, sectionAccents[idx % sectionAccents.length])
     ).join('');
   } else {
     listEl.innerHTML = items.map((a,i) => accRowHtml(type, a, i)).join('');
   }
 }
 
-function reqSectionHtml(label, products, flags) {
+function reqSectionHtml(label, products, flags, accent) {
   const f = flags || {};
-  return `<div class="req-section-block" style="border:1px solid #21262d;border-radius:8px;margin-bottom:12px;overflow:hidden">
-    <div style="background:#0d1117;padding:10px 14px;display:flex;align-items:center;gap:10px">
+  const ac = accent || '#388bfd';
+  return `<div class="req-section-block" style="border:1px solid ${ac};border-radius:8px;margin-bottom:12px;overflow:hidden">
+    <div style="background:#0d1117;padding:10px 14px;display:flex;align-items:center;gap:10px;border-left:4px solid ${ac}">
       <span class="drag-handle" style="cursor:grab;color:#484f58;font-size:1.1rem">⠿</span>
       <div style="flex:1">
         <label style="font-size:0.7rem;font-weight:600;color:#8b949e;display:block;margin-bottom:3px">Section Name</label>
@@ -444,7 +446,9 @@ function accRowHtml(type, a, i) {
 }
 
 window.addReqSection = function() {
-  document.getElementById('gm-req-list').insertAdjacentHTML('beforeend', reqSectionHtml('', [], {}));
+  const sectionAccents = ['#388bfd','#3fb950','#f0883e','#bc8cff','#58a6ff','#56d364'];
+  const idx = document.querySelectorAll('#gm-req-list .req-section-block').length;
+  document.getElementById('gm-req-list').insertAdjacentHTML('beforeend', reqSectionHtml('', [], {}, sectionAccents[idx % sectionAccents.length]));
 };
 
 window.addProductToSection = function(btn) {
