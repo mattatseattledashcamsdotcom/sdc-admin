@@ -8,7 +8,7 @@
 <body>
 <script>
   // Root just redirects to appointments
-  if (!sessionStorage.getItem('sdc_admin_secret')) {
+  if (!localStorage.getItem('sdc_admin_secret')) {
     location.href = './login.html';
   } else {
     location.href = './appointments.html';

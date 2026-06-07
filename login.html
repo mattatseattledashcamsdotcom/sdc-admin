@@ -31,28 +31,35 @@
   import { WORKER_URL, setSecret, api } from './config.js';
 
   // Already logged in?
-  if (sessionStorage.getItem('sdc_admin_secret')) {
+  if (localStorage.getItem('sdc_admin_secret')) {
     location.href = './index.html';
   }
 
   window.login = async function() {
     const secret = document.getElementById('secret').value.trim();
     if (!secret) return;
-    setSecret(secret);
-    // Verify by hitting a lightweight admin endpoint
+    const btn = document.querySelector('button');
+    btn.textContent = 'Signing in…';
+    btn.disabled = true;
+    document.getElementById('err').style.display = 'none';
     try {
       const res = await fetch(`${WORKER_URL}/admin/settings`, {
         headers: { 'Authorization': `Bearer ${secret}` }
       });
       if (res.ok) {
+        setSecret(secret);
         location.href = './index.html';
       } else {
-        sessionStorage.removeItem('sdc_admin_secret');
+        localStorage.removeItem('sdc_admin_secret');
         document.getElementById('err').style.display = 'block';
+        btn.textContent = 'Sign in →';
+        btn.disabled = false;
       }
     } catch {
       document.getElementById('err').textContent = 'Could not reach server.';
       document.getElementById('err').style.display = 'block';
+      btn.textContent = 'Sign in →';
+      btn.disabled = false;
     }
   };
 </script>

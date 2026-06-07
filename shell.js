@@ -73,6 +73,6 @@ window.closeSidebar = function() {
 };
 
 window.logout = function() {
-  sessionStorage.removeItem('sdc_admin_secret');
+  localStorage.removeItem('sdc_admin_secret');
   location.href = './login.html';
 };
