@@ -140,10 +140,6 @@
 
       <!-- Tab 3: Optional Accessories -->
       <div class="step-panel" id="gm-tab-2">
-        <div style="display:flex;align-items:center;justify-content:space-between;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px;margin-bottom:14px">
-          <div><div style="font-size:0.82rem;font-weight:600">Block starts expanded on PDP</div><div style="font-size:0.7rem;color:#484f58">Collapsed by default if off</div></div>
-          <label class="sw"><input type="checkbox" id="gm-opt-expanded"><span class="sw-track"></span></label>
-        </div>
         <div id="gm-opt-list"></div>
         <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addAccessoryRow('opt')">+ Add Shopify Product</button>
       </div>
@@ -270,7 +266,6 @@ window.openGroupModal = async function(id) {
     document.getElementById('gm-turnaround').value = g.confirmation_turnaround || '12 business hours';
     setChannel(g.channel_count, null);
     document.getElementById('gm-req-expanded').checked = !!g.block_req_expanded;
-    document.getElementById('gm-opt-expanded').checked = !!g.block_opt_expanded;
     document.getElementById('gm-upsell-expanded').checked = !!g.block_upsell_expanded;
     document.getElementById('gm-req-vis').checked = !!g.block_req_visible;
     document.getElementById('gm-opt-vis').checked = !!g.block_opt_visible;
@@ -529,7 +524,7 @@ window.saveGroup = async function() {
     block_req_visible: document.getElementById('gm-req-vis').checked ? 1 : 0,
     block_req_expanded: document.getElementById('gm-req-expanded').checked ? 1 : 0,
     block_opt_visible: document.getElementById('gm-opt-vis').checked ? 1 : 0,
-    block_opt_expanded: document.getElementById('gm-opt-expanded').checked ? 1 : 0,
+    block_opt_expanded: 1,
     block_upsell_visible: document.getElementById('gm-upsell-vis').checked ? 1 : 0,
     block_upsell_expanded: document.getElementById('gm-upsell-expanded').checked ? 1 : 0,
     wte_content: '',
