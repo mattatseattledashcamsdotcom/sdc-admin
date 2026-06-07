@@ -1,13 +1,13 @@
 // Central config — update WORKER_URL if it ever changes
 export const WORKER_URL = 'https://sdc-worker.solitary-truth-a9af.workers.dev';
 
-// Admin secret is entered at login and stored in sessionStorage
+// Admin secret is entered at login and stored in localStorage
 export function getSecret() {
-  return sessionStorage.getItem('sdc_admin_secret') || '';
+  return localStorage.getItem('sdc_admin_secret') || '';
 }
 
 export function setSecret(s) {
-  sessionStorage.setItem('sdc_admin_secret', s);
+  localStorage.setItem('sdc_admin_secret', s);
 }
 
 export async function api(path, options = {}) {
@@ -20,7 +20,7 @@ export async function api(path, options = {}) {
     },
   });
   if (res.status === 401) {
-    sessionStorage.removeItem('sdc_admin_secret');
+    localStorage.removeItem('sdc_admin_secret');
     location.href = '/sdc-admin/login.html';
     throw new Error('Unauthorized');
   }
