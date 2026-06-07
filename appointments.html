@@ -245,7 +245,8 @@ window.syncLegacy = async function() {
     toast(`Imported ${data.inserted} bookings (${data.skipped} skipped)`);
     loadBookings();
   } else {
-    toast('Sync failed', true);
+    toast(`Sync failed: ${data.error || res.status}`, true);
+    console.error('Sync failed', res.status, data);
   }
 };
 
