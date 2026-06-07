@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZIP Lookup — SDC Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SDC Admin">
+  <style>
+    .zip-wrap { max-width: 520px; }
+    .zip-form { display: flex; gap: 8px; margin-bottom: 12px; }
+    #zip-input {
+      flex: 1;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 1.6rem;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: 0.1em;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #zip-input:focus { border-color: rgba(34,197,94,0.5); }
+    #zip-input::placeholder { color: #484f58; font-weight: 400; font-size: 1.2rem; }
+    #zip-btn {
+      background: #238636;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 0 22px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      min-width: 80px;
+      transition: background 0.15s;
+    }
+    #zip-btn:active { background: #2ea043; }
+    #zip-status { font-size: 0.82rem; color: #8b949e; min-height: 18px; margin-bottom: 16px; }
+    #zip-status.ok { color: #3fb950; }
+    #zip-status.bad { color: #f85149; }
+
+    .date-group { margin-bottom: 18px; }
+    .date-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #8b949e;
+      margin-bottom: 8px;
+    }
+    .slot-row {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      padding: 13px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .slot-time { font-size: 0.92rem; font-weight: 700; color: #f8fafc; }
+    .slot-cap {
+      font-size: 0.75rem;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+    .slot-cap.open { background: #0d4a1e; color: #3fb950; }
+    .slot-cap.full { background: #3d1f1f; color: #f85149; }
+    .empty-state { color: #484f58; font-size: 0.88rem; padding: 20px 0; }
+  </style>
+</head>
+<body>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">ZIP Lookup</div>
+      <div class="topbar-sub">Check availability for a customer's ZIP code</div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="zip-wrap">
+      <div class="zip-form">
+        <input id="zip-input" type="text" maxlength="5" placeholder="98056" inputmode="numeric" autocomplete="off">
+        <button id="zip-btn" onclick="lookup()">Check</button>
+      </div>
+      <div id="zip-status"></div>
+      <div id="results"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, renderShell } from './shell.js';
+import { WORKER_URL } from './config.js';
+
+requireAuth();
+renderShell({ active: 'zip-lookup' });
+
+const input = document.getElementById('zip-input');
+const status = document.getElementById('zip-status');
+const results = document.getElementById('results');
+
+input.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+input.addEventListener('input', () => {
+  if (input.value.length === 5) lookup();
+});
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function fmtTime(t24) {
+  const [h, m] = t24.split(':').map(Number);
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const h12 = h % 12 || 12;
+  return m === 0 ? `${h12} ${ampm}` : `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+window.lookup = async function() {
+  const zip = input.value.trim();
+  if (!/^\d{5}$/.test(zip)) return;
+  status.textContent = 'Checking…';
+  status.className = '';
+  results.innerHTML = '';
+
+  try {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+    const res = await fetch(`${WORKER_URL}/api/availability?zip=${zip}&from=${today}&days=60`);
+    const data = await res.json();
+    const slots = data.available || [];
+
+    if (!slots.length) {
+      status.textContent = `ZIP ${zip} — outside service area or no availability in next 60 days`;
+      status.className = 'bad';
+      return;
+    }
+
+    // Group by date
+    const byDate = {};
+    for (const s of slots) {
+      if (!byDate[s.date]) byDate[s.date] = [];
+      byDate[s.date].push(s);
+    }
+
+    status.textContent = `ZIP ${zip} — ${Object.keys(byDate).length} days available`;
+    status.className = 'ok';
+
+    results.innerHTML = Object.entries(byDate).map(([date, daySlots]) => {
+      const [y, m, d] = date.split('-').map(Number);
+      const dow = new Date(y, m - 1, d).getDay();
+      const label = `${DAYS[dow]}, ${MONTHS[m-1]} ${d}`;
+      const rows = daySlots.map(s => {
+        const time = `${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}`;
+        const open = s.remaining > 0;
+        return `<div class="slot-row">
+          <div class="slot-time">${time}</div>
+          <div class="slot-cap ${open ? 'open' : 'full'}">${open ? `${s.remaining} open` : 'Booked'}</div>
+        </div>`;
+      }).join('');
+      return `<div class="date-group"><div class="date-label">${label}</div>${rows}</div>`;
+    }).join('');
+
+  } catch {
+    status.textContent = 'Error checking availability — try again';
+    status.className = 'bad';
+  }
+};
+</script>
+</body>
+</html>

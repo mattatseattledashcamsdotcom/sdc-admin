@@ -12,6 +12,7 @@ export function requireAuth() {
 export function renderShell({ active }) {
   const nav = [
     { id: 'appointments', label: 'Appointments', href: 'appointments.html', icon: `<rect x="2" y="3" width="12" height="12" rx="2"/><path d="M5 1v4M11 1v4M2 8h12"/>` },
+    { id: 'zip-lookup', label: 'ZIP Lookup', href: 'zip-lookup.html', icon: `<circle cx="8" cy="7" r="4"/><path d="M8 11v4M5 14h6"/><path d="M5 7h6"/>` },
     { id: 'configurator', label: 'Product Configurator', href: 'configurator.html', icon: `<path d="M2 4h12M2 8h8M2 12h10"/><circle cx="13" cy="12" r="2.5"/><path d="M13 10.5v1l.7.7"/>` },
     { id: 'schedule', label: 'Schedule Editor', href: 'schedule.html', icon: `<circle cx="8" cy="8" r="6"/><path d="M8 4.5v3.5l2.5 2"/>` },
     { id: 'reminders', label: 'Reminders', href: 'reminders.html', icon: `<path d="M13 3l-1.5 5H10L8.5 13 6 7H4.5L3 3"/>` },
@@ -19,7 +20,7 @@ export function renderShell({ active }) {
   ];
 
   const sections = {
-    'Bookings': ['appointments'],
+    'Bookings': ['appointments', 'zip-lookup'],
     'Catalog': ['configurator'],
     'Scheduling': ['schedule'],
     'Automation': ['reminders', 'followups'],
