@@ -135,7 +135,7 @@
           <label class="sw"><input type="checkbox" id="gm-req-expanded" checked><span class="sw-track"></span></label>
         </div>
         <div id="gm-req-list"></div>
-        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addAccessoryRow('req')">+ Add Shopify Product</button>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addReqSection()">+ Add Section</button>
       </div>
 
       <!-- Tab 3: Optional Accessories -->
@@ -320,7 +320,71 @@ window.setChannel = function(val, el) {
 
 function renderAccList(type, items) {
   const listEl = document.getElementById(`gm-${type}-list`);
-  listEl.innerHTML = items.map((a,i) => accRowHtml(type, a, i)).join('');
+  if (type === 'required') {
+    // Group by section_label
+    const sectionMap = new Map();
+    items.forEach(a => {
+      const label = a.section_label || 'Required';
+      if (!sectionMap.has(label)) sectionMap.set(label, { products: [], flags: a });
+      sectionMap.get(label).products.push(a);
+    });
+    listEl.innerHTML = [...sectionMap.entries()].map(([label, { products, flags }]) =>
+      reqSectionHtml(label, products, flags)
+    ).join('');
+  } else {
+    listEl.innerHTML = items.map((a,i) => accRowHtml(type, a, i)).join('');
+  }
+}
+
+function reqSectionHtml(label, products, flags) {
+  const f = flags || {};
+  return `<div class="req-section-block" style="border:1px solid #21262d;border-radius:8px;margin-bottom:12px;overflow:hidden">
+    <div style="background:#0d1117;padding:10px 14px;display:flex;align-items:center;gap:10px">
+      <span class="drag-handle" style="cursor:grab;color:#484f58;font-size:1.1rem">⠿</span>
+      <div style="flex:1">
+        <label style="font-size:0.7rem;font-weight:600;color:#8b949e;display:block;margin-bottom:3px">Section Name</label>
+        <input type="text" class="req-section-name" value="${label !== 'Required' ? label : ''}" placeholder="e.g. Hardwire Kit, SD Card" style="background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
+      </div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('.req-section-block').remove()" style="flex-shrink:0">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
+      </button>
+    </div>
+    <div style="padding:10px 14px;background:#0d1117;border-top:1px solid #21262d;display:flex;gap:16px;flex-wrap:wrap">
+      <label class="sw"><input type="checkbox" class="sec-force-select" ${f.force_select?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Force selection (no auto-select, blocks booking)</span></label>
+      <label class="sw"><input type="checkbox" class="sec-byo-default" ${f.byo_default?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO pre-selected by default</span></label>
+      <label class="sw"><input type="checkbox" class="sec-byo-only" ${f.byo_only?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO only (hide product rows, customer confirms they have one)</span></label>
+    </div>
+    <div class="req-section-products" style="padding:10px 14px;border-top:1px solid #21262d;display:flex;flex-direction:column;gap:8px">
+      ${products.map(a => reqProductRowHtml(a)).join('')}
+    </div>
+    <div style="padding:8px 14px;border-top:1px solid #21262d">
+      <button class="btn btn-ghost btn-sm" onclick="addProductToSection(this)">+ Add product to section</button>
+    </div>
+  </div>`;
+}
+
+function reqProductRowHtml(a) {
+  const title = a.shopify_product_id && productTitleCache[a.shopify_product_id] ? productTitleCache[a.shopify_product_id] : '';
+  return `<div class="acc-row req-product-row" style="background:#161b22;border:1px solid #21262d;border-radius:6px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px">
+    <span class="drag-handle" style="cursor:grab;color:#484f58;padding-top:2px">⠿</span>
+    <div style="flex:1">
+      ${title ? `<div style="font-size:0.75rem;font-weight:600;color:#3fb950;margin-bottom:4px">${title}</div>` : ''}
+      <div class="form-row" style="margin-bottom:6px">
+        <div class="form-group" style="margin-bottom:0"><label>Shopify Product ID</label>
+          <input type="text" class="acc-pid" value="${a.shopify_product_id||''}" placeholder="gid://shopify/Product/…">
+        </div>
+        <div class="form-group" style="margin-bottom:0"><label>Default Variant ID</label>
+          <input type="text" class="acc-vid" value="${a.default_variant_id||''}" placeholder="gid://shopify/ProductVariant/…">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label>Customer Note <span style="font-weight:400;color:#484f58">(optional — shown in orange italic)</span></label>
+        <input type="text" class="acc-note" value="${a.note||''}" placeholder="e.g. Recommended for parking mode">
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('.req-product-row').remove()">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
+    </button>
+  </div>`;
 }
 
 function accRowHtml(type, a, i) {
@@ -337,24 +401,12 @@ function accRowHtml(type, a, i) {
         </div>
       </div>
       <div class="form-row" style="margin-bottom:6px">
-        ${type==='required' ? `
-        <div class="form-group" style="margin-bottom:0"><label>Section Label <span style="font-weight:400;color:#484f58">(e.g. Hardwire Kit, SD Card)</span></label>
-          <input type="text" class="acc-section-label" value="${a.section_label||''}" placeholder="Groups radio options under a heading">
-        </div>` : ''}
         <div class="form-group" style="margin-bottom:0"><label>Customer Note <span style="font-weight:400;color:#484f58">(optional — shown in orange italic)</span></label>
           <input type="text" class="acc-note" value="${a.note||''}" placeholder="e.g. Customer must provide their own SSD">
         </div>
       </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
-        ${type==='required' ? `
-          <label class="sw"><input type="checkbox" class="acc-byo" ${a.byo_enabled?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO option</span></label>
-          <label class="sw"><input type="checkbox" class="acc-locked" ${a.is_locked?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Locked checkbox</span></label>
-          <label class="sw"><input type="checkbox" class="acc-force-select" ${a.force_select?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Force selection (no auto-select, blocks booking)</span></label>
-          <label class="sw"><input type="checkbox" class="acc-byo-default" ${a.byo_default?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO pre-selected by default</span></label>
-          <label class="sw"><input type="checkbox" class="acc-byo-only" ${a.byo_only?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO only (hide product rows)</span></label>
-        ` : `
-          <label class="sw"><input type="checkbox" class="acc-pre" ${a.preselected?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Pre-selected by default</span></label>
-        `}
+        <label class="sw"><input type="checkbox" class="acc-pre" ${a.preselected?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Pre-selected by default</span></label>
       </div>
     </div>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('.acc-row').remove()">
@@ -362,6 +414,14 @@ function accRowHtml(type, a, i) {
     </button>
   </div>`;
 }
+
+window.addReqSection = function() {
+  document.getElementById('gm-req-list').insertAdjacentHTML('beforeend', reqSectionHtml('', [], {}));
+};
+
+window.addProductToSection = function(btn) {
+  btn.closest('.req-section-block').querySelector('.req-section-products').insertAdjacentHTML('beforeend', reqProductRowHtml({}));
+};
 
 window.addAccessoryRow = function(type) {
   document.getElementById(`gm-${type}-list`).insertAdjacentHTML('beforeend', accRowHtml(type, {}, Date.now()));
@@ -398,19 +458,25 @@ window.addUpsellRow = function() {
 
 window.saveGroup = async function() {
   const accessories = [
-    ...[...document.querySelectorAll('#gm-req-list .acc-row')].map(row => ({
-      type: 'required',
-      shopify_product_id: row.querySelector('.acc-pid').value,
-      default_variant_id: row.querySelector('.acc-vid').value || null,
-      section_label: row.querySelector('.acc-section-label')?.value.trim() || null,
-      note: row.querySelector('.acc-note')?.value.trim() || null,
-      byo_enabled: row.querySelector('.acc-byo')?.checked ? 1 : 0,
-      is_locked: row.querySelector('.acc-locked')?.checked ? 1 : 0,
-      force_select: row.querySelector('.acc-force-select')?.checked ? 1 : 0,
-      byo_default: row.querySelector('.acc-byo-default')?.checked ? 1 : 0,
-      byo_only: row.querySelector('.acc-byo-only')?.checked ? 1 : 0,
-      preselected: 0,
-    })),
+    ...[...document.querySelectorAll('#gm-req-list .req-section-block')].flatMap(sec => {
+      const label = sec.querySelector('.req-section-name').value.trim() || null;
+      const force_select = sec.querySelector('.sec-force-select').checked ? 1 : 0;
+      const byo_default = sec.querySelector('.sec-byo-default').checked ? 1 : 0;
+      const byo_only = sec.querySelector('.sec-byo-only').checked ? 1 : 0;
+      return [...sec.querySelectorAll('.req-product-row')].map(row => ({
+        type: 'required',
+        shopify_product_id: row.querySelector('.acc-pid').value,
+        default_variant_id: row.querySelector('.acc-vid').value || null,
+        section_label: label,
+        note: row.querySelector('.acc-note')?.value.trim() || null,
+        byo_enabled: 1,
+        is_locked: 1,
+        force_select,
+        byo_default,
+        byo_only,
+        preselected: 0,
+      }));
+    }),
     ...[...document.querySelectorAll('#gm-opt-list .acc-row')].map(row => ({
       type: 'optional',
       shopify_product_id: row.querySelector('.acc-pid').value,
