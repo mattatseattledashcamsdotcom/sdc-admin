@@ -212,6 +212,21 @@ renderShell({ active: 'configurator' });
 let groups = [];
 let currentGroupId = null;
 let currentChannel = null;
+let productTitleCache = {};
+
+async function resolveProductTitles(ids) {
+  const missing = ids.filter(id => id && !productTitleCache[id]);
+  if (missing.length) {
+    const res = await api('/admin/product-titles', { method: 'POST', body: JSON.stringify({ ids: missing }) });
+    const map = await res.json();
+    Object.assign(productTitleCache, map);
+  }
+  return ids.map(id => productTitleCache[id] || id);
+}
+
+function shortTitle(gid) {
+  return productTitleCache[gid] || gid;
+}
 
 // ── Groups list ────────────────────────────────────────────────────────────
 
@@ -262,6 +277,8 @@ window.openGroupModal = async function(id) {
     document.getElementById('gm-opt-vis').checked = !!g.block_opt_visible;
     document.getElementById('gm-upsell-vis').checked = !!g.block_upsell_visible;
     document.getElementById('gm-wte').value = g.wte_content || '';
+    const allAccPids = (g.accessories||[]).map(a=>a.shopify_product_id).filter(Boolean);
+    await resolveProductTitles(allAccPids);
     renderAccList('req', (g.accessories||[]).filter(a=>a.type==='required'));
     renderAccList('opt', (g.accessories||[]).filter(a=>a.type==='optional'));
     renderUpsellList(g.upsells||[]);
@@ -298,6 +315,7 @@ function accRowHtml(type, a, i) {
     <div style="flex:1">
       <div class="form-row" style="margin-bottom:6px">
         <div class="form-group" style="margin-bottom:0"><label>Shopify Product ID</label>
+          ${a.shopify_product_id && productTitleCache[a.shopify_product_id] ? `<div style="font-size:0.75rem;font-weight:600;color:#3fb950;margin-bottom:4px">${productTitleCache[a.shopify_product_id]}</div>` : ''}
           <input type="text" class="acc-pid" value="${a.shopify_product_id||''}" placeholder="gid://shopify/Product/…">
         </div>
         <div class="form-group" style="margin-bottom:0"><label>Default Variant ID</label>
@@ -456,12 +474,16 @@ async function loadAssignments() {
     document.getElementById('assignments-table').innerHTML = '<div class="empty"><div class="empty-title">No cameras assigned yet</div></div>';
     return;
   }
+  await resolveProductTitles(assignments.map(a => a.shopify_product_id));
   document.getElementById('assignments-table').innerHTML = `
     <table class="table">
-      <thead><tr><th>Product ID</th><th>Group</th><th></th></tr></thead>
+      <thead><tr><th>Product</th><th>Group</th><th></th></tr></thead>
       <tbody>${assignments.map(a => `
         <tr>
-          <td style="font-family:monospace;font-size:0.72rem">${a.shopify_product_id}</td>
+          <td>
+            <div style="font-size:0.82rem;font-weight:600">${shortTitle(a.shopify_product_id)}</div>
+            <div style="font-family:monospace;font-size:0.66rem;color:#484f58">${a.shopify_product_id}</div>
+          </td>
           <td>${a.group_name||'—'}</td>
           <td><button class="btn btn-ghost btn-sm btn-icon" onclick="removeAssignment('${a.shopify_product_id}')">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
