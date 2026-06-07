@@ -358,8 +358,8 @@ function reqProductRowHtml(a) {
   const n = parseNote(a.note);
   return `<div class="acc-row req-product-row" style="background:#161b22;border:1px solid #21262d;border-radius:6px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px">
     <span class="drag-handle" style="cursor:grab;color:#484f58;padding-top:2px">⠿</span>
-    <div style="flex:1">
-      ${title ? `<div style="font-size:0.75rem;font-weight:600;color:#3fb950;margin-bottom:4px">${title}</div>` : ''}
+    <div style="flex:1;min-width:0">
+      ${title ? `<div style="font-size:0.75rem;font-weight:600;color:#3fb950;margin-bottom:6px">${title}</div>` : ''}
       <div class="form-row" style="margin-bottom:6px">
         <div class="form-group" style="margin-bottom:0"><label>Shopify Product ID</label>
           <input type="text" class="acc-pid" value="${a.shopify_product_id||''}" placeholder="gid://shopify/Product/…">
@@ -368,21 +368,20 @@ function reqProductRowHtml(a) {
           <input type="text" class="acc-vid" value="${a.default_variant_id||''}" placeholder="gid://shopify/ProductVariant/…">
         </div>
       </div>
-      <div class="form-row" style="margin-bottom:6px">
+      <div style="margin-bottom:6px">
         <div class="form-group" style="margin-bottom:0"><label>Customer Note <span style="font-weight:400;color:#484f58">(optional — shown in orange italic)</span></label>
           <input type="text" class="acc-note" value="${n.text}" placeholder="e.g. Recommended for parking mode">
         </div>
       </div>
-      <div class="form-row" style="margin-bottom:0">
-        <div class="form-group" style="margin-bottom:0"><label>Note Link Text <span style="font-weight:400;color:#484f58">(hyperlinked word at end of note)</span></label>
+      <div class="form-row" style="margin-bottom:6px">
+        <div class="form-group" style="margin-bottom:0"><label>Note Link Text <span style="font-weight:400;color:#484f58">(hyperlinked word)</span></label>
           <input type="text" class="acc-note-link-text" value="${n.linkText}" placeholder="e.g. learn more">
         </div>
         <div class="form-group" style="margin-bottom:0"><label>Note Link URL</label>
           <input type="text" class="acc-note-link-url" value="${n.linkUrl}" placeholder="https://…">
         </div>
       </div>
-      <div class="form-row" style="margin-bottom:0;margin-top:6px">
-        <div class="form-group" style="margin-bottom:0"><label>Brand Filter <span style="font-weight:400;color:#484f58">(BYO only — show for this brand)</span></label>
+      <div style="margin-bottom:0">
         <div class="form-group" style="margin-bottom:0"><label>Brand Filter <span style="font-weight:400;color:#484f58">(BYO only — show for this brand)</span></label>
           <select class="acc-brand-filter" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
             <option value="">All brands (always show)</option>
@@ -397,7 +396,7 @@ function reqProductRowHtml(a) {
         </div>
       </div>
     </div>
-    <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('.req-product-row').remove()">
+    <button class="btn btn-ghost btn-sm btn-icon" style="flex-shrink:0" onclick="this.closest('.req-product-row').remove()">
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
     </button>
   </div>`;
