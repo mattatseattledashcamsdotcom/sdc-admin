@@ -40,7 +40,8 @@ export function renderShell({ active }) {
   }
 
   document.body.insertAdjacentHTML('afterbegin', `
-    <aside class="sidebar">
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">
         <span>SDC Admin</span>
         <small>Seattle Dash Cams</small>
@@ -51,7 +52,25 @@ export function renderShell({ active }) {
       </div>
     </aside>
   `);
+
+  // Inject hamburger into topbar after it renders
+  requestAnimationFrame(() => {
+    const topbar = document.querySelector('.topbar');
+    if (topbar) {
+      const ham = document.createElement('button');
+      ham.className = 'ham-btn';
+      ham.setAttribute('aria-label', 'Menu');
+      ham.innerHTML = `<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4h12M2 8h12M2 12h12"/></svg>`;
+      ham.onclick = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebar-overlay').classList.toggle('open'); };
+      topbar.insertBefore(ham, topbar.firstChild);
+    }
+  });
 }
+
+window.closeSidebar = function() {
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('open');
+};
 
 window.logout = function() {
   sessionStorage.removeItem('sdc_admin_secret');
