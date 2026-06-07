@@ -88,15 +88,15 @@ window.loadBookings = async function() {
   document.getElementById('table-wrap').innerHTML = `
     <table class="table">
       <thead><tr>
-        <th>ID</th><th>Date / Time</th><th>Customer</th><th>Address</th><th>Status</th><th></th>
+        <th class="hide-mobile">ID</th><th>Date / Time</th><th>Customer</th><th class="hide-mobile">Address</th><th>Status</th><th></th>
       </tr></thead>
       <tbody>
         ${bookings.map(b => `
           <tr onclick="openBooking('${b.id}')">
-            <td style="font-family:monospace;font-size:0.72rem;color:#484f58">${b.id.slice(0,8)}</td>
-            <td><div style="font-weight:600">${formatDate(b.appointment_date)}</div><div style="font-size:0.72rem;color:#8b949e">${formatTime(b.appointment_time)}</div></td>
-            <td><div style="font-weight:600">${b.customer_name}</div><div style="font-size:0.72rem;color:#8b949e">${b.customer_email}</div></td>
-            <td style="font-size:0.78rem;color:#8b949e;max-width:200px">${b.service_address || '—'}</td>
+            <td class="hide-mobile" style="font-family:monospace;font-size:0.72rem;color:#484f58">${b.id.slice(0,8)}</td>
+            <td style="white-space:nowrap"><div style="font-weight:600">${formatDate(b.appointment_date)}</div><div style="font-size:0.72rem;color:#8b949e">${formatTime(b.appointment_time)}</div></td>
+            <td><div style="font-weight:600">${b.customer_name}</div><div style="font-size:0.72rem;color:#8b949e">${b.customer_email || b.customer_phone || ''}</div></td>
+            <td class="hide-mobile" style="font-size:0.78rem;color:#8b949e;max-width:200px">${b.service_address || '—'}</td>
             <td><span class="badge ${STATUS_BADGE[b.status] || 'badge-gray'}">${b.status}</span></td>
             <td onclick="event.stopPropagation()">
               ${b.status === 'pending' ? `
