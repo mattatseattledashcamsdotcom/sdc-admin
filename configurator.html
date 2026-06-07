@@ -349,6 +349,9 @@ function accRowHtml(type, a, i) {
         ${type==='required' ? `
           <label class="sw"><input type="checkbox" class="acc-byo" ${a.byo_enabled?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO option</span></label>
           <label class="sw"><input type="checkbox" class="acc-locked" ${a.is_locked?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Locked checkbox</span></label>
+          <label class="sw"><input type="checkbox" class="acc-force-select" ${a.force_select?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Force selection (no auto-select, blocks booking)</span></label>
+          <label class="sw"><input type="checkbox" class="acc-byo-default" ${a.byo_default?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO pre-selected by default</span></label>
+          <label class="sw"><input type="checkbox" class="acc-byo-only" ${a.byo_only?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO only (hide product rows)</span></label>
         ` : `
           <label class="sw"><input type="checkbox" class="acc-pre" ${a.preselected?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Pre-selected by default</span></label>
         `}
@@ -403,6 +406,9 @@ window.saveGroup = async function() {
       note: row.querySelector('.acc-note')?.value.trim() || null,
       byo_enabled: row.querySelector('.acc-byo')?.checked ? 1 : 0,
       is_locked: row.querySelector('.acc-locked')?.checked ? 1 : 0,
+      force_select: row.querySelector('.acc-force-select')?.checked ? 1 : 0,
+      byo_default: row.querySelector('.acc-byo-default')?.checked ? 1 : 0,
+      byo_only: row.querySelector('.acc-byo-only')?.checked ? 1 : 0,
       preselected: 0,
     })),
     ...[...document.querySelectorAll('#gm-opt-list .acc-row')].map(row => ({
