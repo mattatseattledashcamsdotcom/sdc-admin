@@ -186,21 +186,21 @@ window.openNew = function() {
   currentId = null;
   document.getElementById('modal-title').textContent = 'New Manual Booking';
   document.getElementById('modal-body').innerHTML = `
-    <div class="notice yellow" style="margin-bottom:16px">Tip: for phone bookings with a Shopify order, paste the order number and the system will fill in customer details automatically in the real app.</div>
     <div class="form-row" style="margin-bottom:16px">
-      <div class="form-group" style="margin-bottom:0"><label>Customer Name</label><input type="text" id="edit-name" placeholder="John Smith"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Customer Name *</label><input type="text" id="edit-name" placeholder="John Smith"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Phone *</label><input type="text" id="edit-phone" placeholder="(206) 555-1234"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
       <div class="form-group" style="margin-bottom:0"><label>Email</label><input type="email" id="edit-email" placeholder="john@email.com"></div>
+      <div class="form-group" style="margin-bottom:0"><label>ZIP *</label><input type="text" id="edit-zip" placeholder="98056"></div>
     </div>
+    <div class="form-group"><label>Service Address *</label><input type="text" id="edit-address" placeholder="123 Main St, Renton WA 98056"></div>
     <div class="form-row" style="margin-bottom:16px">
-      <div class="form-group" style="margin-bottom:0"><label>Phone</label><input type="text" id="edit-phone" placeholder="(206) 555-1234"></div>
-      <div class="form-group" style="margin-bottom:0"><label>Appointment Date</label><input type="date" id="edit-date"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Appointment Date *</label><input type="date" id="edit-date"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Time *</label><input type="time" id="edit-time"></div>
     </div>
-    <div class="form-row" style="margin-bottom:16px">
-      <div class="form-group" style="margin-bottom:0"><label>Time</label><input type="text" id="edit-time" placeholder="08:00"></div>
-      <div class="form-group" style="margin-bottom:0"><label>ZIP</label><input type="text" id="edit-zip" placeholder="98056"></div>
-    </div>
-    <div class="form-group"><label>Service Address</label><input type="text" id="edit-address"></div>
-    <div class="form-group"><label>Notes</label><textarea id="edit-notes"></textarea></div>
+    <div class="form-group"><label>Products / What's being installed</label><input type="text" id="edit-products" placeholder="VIOFO A229 Pro 2-Channel, 128GB SD card"></div>
+    <div class="form-group"><label>Notes</label><textarea id="edit-notes" placeholder="Gate code, parking instructions, etc."></textarea></div>
   `;
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -210,20 +210,29 @@ window.openNew = function() {
 };
 
 window.createBooking = async function() {
-  const res = await api('/api/bookings', {
+  const name = document.getElementById('edit-name').value.trim();
+  const phone = document.getElementById('edit-phone').value.trim();
+  const date = document.getElementById('edit-date').value;
+  const time = document.getElementById('edit-time').value;
+  const address = document.getElementById('edit-address').value.trim();
+  if (!name || !phone || !date || !time || !address) {
+    toast('Name, phone, address, date and time are required', true); return;
+  }
+  const res = await api('/admin/bookings', {
     method: 'POST',
     body: JSON.stringify({
-      customer_name: document.getElementById('edit-name').value,
-      customer_email: document.getElementById('edit-email').value,
-      customer_phone: document.getElementById('edit-phone').value,
-      service_address: document.getElementById('edit-address').value,
-      appointment_date: document.getElementById('edit-date').value,
-      appointment_time: document.getElementById('edit-time').value,
-      zip: document.getElementById('edit-zip')?.value || '',
-      notes: document.getElementById('edit-notes').value,
+      customer_name: name,
+      customer_email: document.getElementById('edit-email').value.trim(),
+      customer_phone: phone,
+      service_address: address,
+      appointment_date: date,
+      appointment_time: time,
+      zip: document.getElementById('edit-zip').value.trim(),
+      products: document.getElementById('edit-products').value.trim(),
+      notes: document.getElementById('edit-notes').value.trim(),
     }),
   });
-  if (res.ok) { toast('Booking created'); closeModal(); loadBookings(); }
+  if (res.ok) { toast('Booking created — calendar event added'); closeModal(); loadBookings(); }
   else toast('Error creating booking', true);
 };
 
