@@ -113,9 +113,18 @@
         </div>
         <div class="form-group">
           <label>Flow Type</label>
-          <select id="gm-flow">
+          <select id="gm-flow" onchange="document.getElementById('gm-byo-channels-row').style.display=this.value==='byo'?'':'none'">
             <option value="standard">Standard Camera + Install / Ship</option>
             <option value="byo">BYO Dash Cam Install</option>
+          </select>
+        </div>
+        <div class="form-group" id="gm-byo-channels-row" style="display:none">
+          <label>Lock Channel Count <span style="font-size:0.75rem;color:#8b949e;font-weight:400">— hides the channel selector on the product page</span></label>
+          <select id="gm-byo-locked-channels" style="max-width:220px">
+            <option value="">Show selector (let customer choose)</option>
+            <option value="1">1 Channel (front only)</option>
+            <option value="2">2 Channel (front + rear)</option>
+            <option value="3">3 Channel (front + rear + interior)</option>
           </select>
         </div>
         <div class="form-group">
@@ -259,6 +268,8 @@ window.openGroupModal = async function(id) {
     document.getElementById('gm-install-sku').value = g.install_sku_id || '';
     resolveInstallSku();
     document.getElementById('gm-flow').value = g.flow_type || 'standard';
+    document.getElementById('gm-byo-channels-row').style.display = g.flow_type === 'byo' ? '' : 'none';
+    document.getElementById('gm-byo-locked-channels').value = g.byo_locked_channels || '';
     document.getElementById('gm-turnaround').value = g.confirmation_turnaround || '12 business hours';
     setChannel(g.channel_count, null);
     document.getElementById('gm-req-expanded').checked = !!g.block_req_expanded;
@@ -533,6 +544,7 @@ window.saveGroup = async function() {
     channel_count: currentChannel || '1',
     install_sku_id: document.getElementById('gm-install-sku').value || null,
     flow_type: document.getElementById('gm-flow').value,
+    byo_locked_channels: parseInt(document.getElementById('gm-byo-locked-channels').value) || null,
     confirmation_turnaround: document.getElementById('gm-turnaround').value,
     block_req_visible: document.getElementById('gm-req-vis').checked ? 1 : 0,
     block_req_expanded: document.getElementById('gm-req-expanded').checked ? 1 : 0,
