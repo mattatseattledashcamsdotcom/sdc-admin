@@ -27,6 +27,7 @@
         <option value="cancelled">Cancelled</option>
         <option value="no_show">No-show</option>
       </select>
+      <button class="btn btn-secondary btn-sm" onclick="syncLegacy()">Sync from Calendar</button>
       <button class="btn btn-secondary btn-sm" onclick="exportCSV()">Export CSV</button>
       <button class="btn btn-primary btn-sm" onclick="openNew()">+ Manual Booking</button>
     </div>
@@ -234,6 +235,18 @@ window.createBooking = async function() {
   });
   if (res.ok) { toast('Booking created — calendar event added'); closeModal(); loadBookings(); }
   else toast('Error creating booking', true);
+};
+
+window.syncLegacy = async function() {
+  if (!confirm('Pull upcoming events from Google Calendar and import them as confirmed bookings? No emails will be sent.')) return;
+  const res = await api('/admin/sync-legacy', { method: 'POST' });
+  const data = await res.json();
+  if (res.ok) {
+    toast(`Imported ${data.inserted} bookings (${data.skipped} skipped)`);
+    loadBookings();
+  } else {
+    toast('Sync failed', true);
+  }
 };
 
 window.exportCSV = function() {
