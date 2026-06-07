@@ -346,8 +346,16 @@ function reqSectionHtml(label, products, flags) {
   </div>`;
 }
 
+function parseNote(raw) {
+  if (!raw) return { text: '', linkText: '', linkUrl: '' };
+  const m = raw.match(/^(.*?)\s*\[([^\]]+)\]\((https?:\/\/[^)]+)\)\s*$/);
+  if (m) return { text: m[1], linkText: m[2], linkUrl: m[3] };
+  return { text: raw, linkText: '', linkUrl: '' };
+}
+
 function reqProductRowHtml(a) {
   const title = a.shopify_product_id && productTitleCache[a.shopify_product_id] ? productTitleCache[a.shopify_product_id] : '';
+  const n = parseNote(a.note);
   return `<div class="acc-row req-product-row" style="background:#161b22;border:1px solid #21262d;border-radius:6px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px">
     <span class="drag-handle" style="cursor:grab;color:#484f58;padding-top:2px">⠿</span>
     <div style="flex:1">
@@ -360,10 +368,21 @@ function reqProductRowHtml(a) {
           <input type="text" class="acc-vid" value="${a.default_variant_id||''}" placeholder="gid://shopify/ProductVariant/…">
         </div>
       </div>
-      <div class="form-row" style="margin-bottom:0">
+      <div class="form-row" style="margin-bottom:6px">
         <div class="form-group" style="margin-bottom:0"><label>Customer Note <span style="font-weight:400;color:#484f58">(optional — shown in orange italic)</span></label>
-          <input type="text" class="acc-note" value="${a.note||''}" placeholder="e.g. Recommended for parking mode">
+          <input type="text" class="acc-note" value="${n.text}" placeholder="e.g. Recommended for parking mode">
         </div>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <div class="form-group" style="margin-bottom:0"><label>Note Link Text <span style="font-weight:400;color:#484f58">(hyperlinked word at end of note)</span></label>
+          <input type="text" class="acc-note-link-text" value="${n.linkText}" placeholder="e.g. learn more">
+        </div>
+        <div class="form-group" style="margin-bottom:0"><label>Note Link URL</label>
+          <input type="text" class="acc-note-link-url" value="${n.linkUrl}" placeholder="https://…">
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:0;margin-top:6px">
+        <div class="form-group" style="margin-bottom:0"><label>Brand Filter <span style="font-weight:400;color:#484f58">(BYO only — show for this brand)</span></label>
         <div class="form-group" style="margin-bottom:0"><label>Brand Filter <span style="font-weight:400;color:#484f58">(BYO only — show for this brand)</span></label>
           <select class="acc-brand-filter" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
             <option value="">All brands (always show)</option>
@@ -479,7 +498,7 @@ window.saveGroup = async function() {
         shopify_product_id: row.querySelector('.acc-pid').value,
         default_variant_id: row.querySelector('.acc-vid').value || null,
         section_label: label,
-        note: row.querySelector('.acc-note')?.value.trim() || null,
+        note: (() => { const t = row.querySelector('.acc-note')?.value.trim()||''; const lt = row.querySelector('.acc-note-link-text')?.value.trim()||''; const lu = row.querySelector('.acc-note-link-url')?.value.trim()||''; return (lt && lu) ? (t ? `${t} [${lt}](${lu})` : `[${lt}](${lu})`) : (t||null); })(),
         byo_enabled: 1,
         is_locked: 1,
         force_select,
