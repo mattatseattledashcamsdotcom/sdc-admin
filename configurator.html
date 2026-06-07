@@ -168,11 +168,6 @@
             <div class="sw-row"><div><div style="font-size:0.82rem">Upsells block visible</div></div><label class="sw"><input type="checkbox" id="gm-upsell-vis" checked><span class="sw-track"></span></label></div>
           </div>
         </div>
-        <div class="divider"></div>
-        <div class="form-group">
-          <label>"What to Expect" content <span style="font-weight:400;color:#484f58">(collapsible section below CTA)</span></label>
-          <textarea id="gm-wte" style="min-height:180px;font-family:monospace;font-size:0.8rem"></textarea>
-        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -280,7 +275,6 @@ window.openGroupModal = async function(id) {
     document.getElementById('gm-req-vis').checked = !!g.block_req_visible;
     document.getElementById('gm-opt-vis').checked = !!g.block_opt_visible;
     document.getElementById('gm-upsell-vis').checked = !!g.block_upsell_visible;
-    document.getElementById('gm-wte').value = g.wte_content || '';
     const allAccPids = (g.accessories||[]).map(a=>a.shopify_product_id).filter(Boolean);
     await resolveProductTitles(allAccPids);
     renderAccList('req', (g.accessories||[]).filter(a=>a.type==='required'));
@@ -289,7 +283,6 @@ window.openGroupModal = async function(id) {
   } else {
     document.getElementById('gm-name').value = '';
     document.getElementById('gm-install-sku').value = '';
-    document.getElementById('gm-wte').value = '';
     document.querySelectorAll('.channel-pill').forEach(p => p.classList.remove('active'));
     renderAccList('req', []);
     renderAccList('opt', []);
@@ -539,7 +532,7 @@ window.saveGroup = async function() {
     block_opt_expanded: document.getElementById('gm-opt-expanded').checked ? 1 : 0,
     block_upsell_visible: document.getElementById('gm-upsell-vis').checked ? 1 : 0,
     block_upsell_expanded: document.getElementById('gm-upsell-expanded').checked ? 1 : 0,
-    wte_content: document.getElementById('gm-wte').value,
+    wte_content: '',
     accessories,
     upsells,
   };
