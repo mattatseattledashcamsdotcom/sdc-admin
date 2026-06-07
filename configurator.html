@@ -320,7 +320,7 @@ window.setChannel = function(val, el) {
 
 function renderAccList(type, items) {
   const listEl = document.getElementById(`gm-${type}-list`);
-  if (type === 'required') {
+  if (type === 'req') {
     // Group by section_label
     const sectionMap = new Map();
     items.forEach(a => {
