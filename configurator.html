@@ -102,10 +102,13 @@
             <div class="channel-pill" onclick="setChannel('3',this)">3-Channel</div>
             <div class="channel-pill" onclick="setChannel('selector',this)">Channel Selector<br><small style="font-size:0.62rem;font-weight:400;opacity:0.7">BYO flow only</small></div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px">
-            <div style="font-size:0.76rem;color:#484f58;white-space:nowrap">Links to non-inv SKU →</div>
-            <input type="text" id="gm-install-sku" placeholder="Shopify product ID for install labor" style="flex:1">
-            <div style="font-size:0.7rem;color:#484f58;white-space:nowrap">auto-added to cart</div>
+          <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="font-size:0.76rem;color:#484f58;white-space:nowrap">Links to non-inv SKU →</div>
+              <input type="text" id="gm-install-sku" placeholder="gid://shopify/Product/..." style="flex:1" oninput="resolveInstallSku()">
+              <div style="font-size:0.7rem;color:#484f58;white-space:nowrap">auto-added to cart</div>
+            </div>
+            <div id="gm-install-sku-name" style="font-size:0.75rem;font-weight:600;color:#3fb950;margin-top:6px;display:none"></div>
           </div>
         </div>
         <div class="form-group">
@@ -267,6 +270,7 @@ window.openGroupModal = async function(id) {
     const g = await res.json();
     document.getElementById('gm-name').value = g.name;
     document.getElementById('gm-install-sku').value = g.install_sku_id || '';
+    resolveInstallSku();
     document.getElementById('gm-flow').value = g.flow_type || 'standard';
     document.getElementById('gm-turnaround').value = g.confirmation_turnaround || '12 business hours';
     setChannel(g.channel_count, null);
@@ -293,6 +297,16 @@ window.openGroupModal = async function(id) {
   }
 
   document.getElementById('group-modal').classList.remove('hidden');
+};
+
+window.resolveInstallSku = async function() {
+  const pid = document.getElementById('gm-install-sku').value.trim();
+  const nameEl = document.getElementById('gm-install-sku-name');
+  if (!pid) { nameEl.style.display = 'none'; return; }
+  await resolveProductTitles([pid]);
+  const title = productTitleCache[pid];
+  if (title) { nameEl.textContent = title; nameEl.style.display = 'block'; }
+  else { nameEl.style.display = 'none'; }
 };
 
 window.setChannel = function(val, el) {
