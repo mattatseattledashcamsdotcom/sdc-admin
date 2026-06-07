@@ -27,9 +27,12 @@
         <option value="cancelled">Cancelled</option>
         <option value="no_show">No-show</option>
       </select>
-      <button class="btn btn-secondary btn-sm" onclick="syncLegacy()">Sync from Calendar</button>
-      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">Export CSV</button>
-      <button class="btn btn-primary btn-sm" onclick="openNew()">+ Manual Booking</button>
+      <button class="btn btn-secondary btn-sm hide-mobile" onclick="syncLegacy()">Sync from Calendar</button>
+      <button class="btn btn-secondary btn-sm hide-mobile" onclick="exportCSV()">Export CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="openNew()">+ New</button>
+      <button class="btn btn-ghost btn-sm btn-icon hide-desktop" onclick="showMobileMenu()" title="More">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="3" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="8" cy="13" r="1"/></svg>
+      </button>
     </div>
   </div>
 
@@ -38,6 +41,20 @@
       <div id="table-wrap">
         <div class="loading">Loading appointments…</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile overflow menu -->
+<div class="modal-backdrop hidden" id="mobile-menu">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-hdr">
+      <div class="modal-title">More options</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeMobileMenu()">✕</button>
+    </div>
+    <div style="padding:12px">
+      <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="syncLegacy();closeMobileMenu()">Sync from Calendar</button>
+      <button class="btn btn-secondary" style="width:100%" onclick="exportCSV();closeMobileMenu()">Export CSV</button>
     </div>
   </div>
 </div>
@@ -85,29 +102,52 @@ window.loadBookings = async function() {
     return;
   }
 
-  document.getElementById('table-wrap').innerHTML = `
-    <table class="table">
-      <thead><tr>
-        <th class="hide-mobile">ID</th><th>Date / Time</th><th>Customer</th><th class="hide-mobile">Address</th><th>Status</th><th></th>
-      </tr></thead>
-      <tbody>
-        ${bookings.map(b => `
-          <tr onclick="openBooking('${b.id}')">
-            <td class="hide-mobile" style="font-family:monospace;font-size:0.72rem;color:#484f58">${b.id.slice(0,8)}</td>
-            <td style="white-space:nowrap"><div style="font-weight:600">${formatDate(b.appointment_date)}</div><div style="font-size:0.72rem;color:#8b949e">${formatTime(b.appointment_time)}</div></td>
-            <td><div style="font-weight:600">${b.customer_name}</div><div style="font-size:0.72rem;color:#8b949e">${b.customer_email || b.customer_phone || ''}</div></td>
-            <td class="hide-mobile" style="font-size:0.78rem;color:#8b949e;max-width:200px">${b.service_address || '—'}</td>
-            <td><span class="badge ${STATUS_BADGE[b.status] || 'badge-gray'}">${b.status}</span></td>
-            <td onclick="event.stopPropagation()">
-              ${b.status === 'pending' ? `
-                <button class="btn btn-primary btn-sm" onclick="updateStatus('${b.id}','confirmed')">Approve</button>
-                <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="updateStatus('${b.id}','rejected')">Reject</button>
-              ` : ''}
-            </td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>`;
+  const isMobile = window.innerWidth <= 768;
+
+  if (isMobile) {
+    document.getElementById('table-wrap').innerHTML = bookings.map(b => `
+      <div class="appt-card" onclick="openBooking('${b.id}')">
+        <div class="appt-card-top">
+          <div>
+            <div class="appt-card-name">${b.customer_name}</div>
+            <div class="appt-card-sub">${b.customer_phone || b.customer_email || ''}</div>
+          </div>
+          <span class="badge ${STATUS_BADGE[b.status] || 'badge-gray'}">${b.status}</span>
+        </div>
+        <div class="appt-card-meta">
+          <span>${formatDate(b.appointment_date)} · ${formatTime(b.appointment_time)}</span>
+          ${b.service_address ? `<span style="color:#484f58">· ${b.service_address}</span>` : ''}
+        </div>
+        ${b.status === 'pending' ? `
+          <div class="appt-card-actions" onclick="event.stopPropagation()">
+            <button class="btn btn-primary btn-sm" onclick="updateStatus('${b.id}','confirmed')">Approve</button>
+            <button class="btn btn-danger btn-sm" onclick="updateStatus('${b.id}','rejected')">Reject</button>
+          </div>` : ''}
+      </div>`).join('');
+  } else {
+    document.getElementById('table-wrap').innerHTML = `
+      <table class="table">
+        <thead><tr>
+          <th>ID</th><th>Date / Time</th><th>Customer</th><th>Address</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${bookings.map(b => `
+            <tr onclick="openBooking('${b.id}')">
+              <td style="font-family:monospace;font-size:0.72rem;color:#484f58">${b.id.slice(0,8)}</td>
+              <td><div style="font-weight:600">${formatDate(b.appointment_date)}</div><div style="font-size:0.72rem;color:#8b949e">${formatTime(b.appointment_time)}</div></td>
+              <td><div style="font-weight:600">${b.customer_name}</div><div style="font-size:0.72rem;color:#8b949e">${b.customer_email || b.customer_phone || ''}</div></td>
+              <td style="font-size:0.78rem;color:#8b949e;max-width:200px">${b.service_address || '—'}</td>
+              <td><span class="badge ${STATUS_BADGE[b.status] || 'badge-gray'}">${b.status}</span></td>
+              <td onclick="event.stopPropagation()">
+                ${b.status === 'pending' ? `
+                  <button class="btn btn-primary btn-sm" onclick="updateStatus('${b.id}','confirmed')">Approve</button>
+                  <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="updateStatus('${b.id}','rejected')">Reject</button>
+                ` : ''}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
 };
 
 window.openBooking = function(id) {
@@ -249,6 +289,9 @@ window.syncLegacy = async function() {
     console.error('Sync failed', res.status, data);
   }
 };
+
+window.showMobileMenu = () => document.getElementById('mobile-menu').classList.remove('hidden');
+window.closeMobileMenu = () => document.getElementById('mobile-menu').classList.add('hidden');
 
 window.exportCSV = function() {
   const headers = ['ID','Date','Time','Customer','Email','Phone','Address','Status'];
