@@ -377,8 +377,22 @@ function reqProductRowHtml(a) {
           <input type="text" class="acc-vid" value="${a.default_variant_id||''}" placeholder="gid://shopify/ProductVariant/…">
         </div>
       </div>
-      <div class="form-group" style="margin-bottom:0"><label>Customer Note <span style="font-weight:400;color:#484f58">(optional — shown in orange italic)</span></label>
-        <input type="text" class="acc-note" value="${a.note||''}" placeholder="e.g. Recommended for parking mode">
+      <div class="form-row" style="margin-bottom:0">
+        <div class="form-group" style="margin-bottom:0"><label>Customer Note <span style="font-weight:400;color:#484f58">(optional — shown in orange italic)</span></label>
+          <input type="text" class="acc-note" value="${a.note||''}" placeholder="e.g. Recommended for parking mode">
+        </div>
+        <div class="form-group" style="margin-bottom:0"><label>Brand Filter <span style="font-weight:400;color:#484f58">(BYO only — show for this brand)</span></label>
+          <select class="acc-brand-filter" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
+            <option value="">All brands (always show)</option>
+            <option${a.brand_filter==='VIOFO'?' selected':''}>VIOFO</option>
+            <option${a.brand_filter==='Vueroid'?' selected':''}>Vueroid</option>
+            <option${a.brand_filter==='Thinkware'?' selected':''}>Thinkware</option>
+            <option${a.brand_filter==='BlackVue'?' selected':''}>BlackVue</option>
+            <option${a.brand_filter==='Vantrue'?' selected':''}>Vantrue</option>
+            <option${a.brand_filter==='70mai'?' selected':''}>70mai</option>
+            <option${a.brand_filter==='Fitcam'?' selected':''}>Fitcam</option>
+          </select>
+        </div>
       </div>
     </div>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('.req-product-row').remove()">
@@ -474,6 +488,7 @@ window.saveGroup = async function() {
         force_select,
         byo_default,
         byo_only,
+        brand_filter: row.querySelector('.acc-brand-filter')?.value || null,
         preselected: 0,
       }));
     }),
