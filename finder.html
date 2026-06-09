@@ -186,6 +186,15 @@ async function init() {
     const res = await api('/admin/finder-config');
     if (res.ok) {
       CFG = await res.json();
+      // Migrate: if byo_book_url is a string (old format), replace with per-channel defaults
+      if (!CFG.install) CFG.install = {};
+      if (typeof CFG.install.byo_book_url !== 'object' || CFG.install.byo_book_url === null) {
+        CFG.install.byo_book_url = {
+          1: '/products/1-channel-installation-front-camera',
+          2: '/products/2-channel-installation-front-and-rear-cameras',
+          3: '/products/3-channel-installation-front-rear-and-interior-cameras',
+        };
+      }
     } else {
       // No config saved yet — seed from default
       CFG = getDefaultConfig();
