@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Finder Config — SDC Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SDC Admin">
+  <style>
+    /* ── Tabs ── */
+    .tabs{display:flex;gap:2px;border-bottom:1px solid #21262d;margin-bottom:24px}
+    .tab-btn{padding:9px 18px;font-size:0.82rem;font-weight:600;background:none;border:none;color:#8b949e;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
+    .tab-btn.active{color:#e6edf3;border-bottom-color:#3fb950}
+    .tab-btn:hover:not(.active){color:#c9d1d9}
+    .tab-pane{display:none}.tab-pane.active{display:block}
+
+    /* ── Cards ── */
+    .cam-card{background:#161b22;border:1px solid #21262d;border-radius:12px;margin-bottom:10px;overflow:hidden}
+    .cam-card-hdr{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;gap:10px}
+    .cam-card-hdr:hover{background:#1c2128}
+    .cam-card-name{font-size:0.88rem;font-weight:700;color:#e6edf3;flex:1}
+    .cam-card-meta{font-size:0.75rem;color:#484f58}
+    .cam-card-body{display:none;padding:18px;border-top:1px solid #21262d}
+    .cam-card-body.open{display:block}
+    .chevron{font-size:0.65rem;color:#484f58;transition:transform .2s}
+    .chevron.open{transform:rotate(180deg)}
+
+    /* ── Form rows ── */
+    .frow{margin-bottom:14px}
+    .frow label{display:block;font-size:0.74rem;font-weight:600;color:#8b949e;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+    .frow input,.frow select,.frow textarea{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:8px 12px;color:#e6edf3;font-size:0.85rem;font-family:inherit;outline:none;transition:border-color .15s}
+    .frow input:focus,.frow select:focus,.frow textarea:focus{border-color:#3fb950}
+    .frow textarea{resize:vertical;min-height:72px;line-height:1.5}
+    .frow select option{background:#161b22}
+    .frow-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:600px){.frow-row{grid-template-columns:1fr}}
+
+    /* ── Bullet list editor ── */
+    .bullet-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+    .bullet-item{display:flex;align-items:center;gap:8px}
+    .bullet-item input{flex:1;background:#0d1117;border:1px solid #30363d;border-radius:7px;padding:7px 10px;color:#e6edf3;font-size:0.83rem;font-family:inherit;outline:none}
+    .bullet-item input:focus{border-color:#3fb950}
+    .bullet-del{background:none;border:none;color:#484f58;cursor:pointer;font-size:1rem;line-height:1;padding:2px 4px}
+    .bullet-del:hover{color:#f85149}
+    .add-bullet-btn{background:none;border:1px dashed #30363d;border-radius:7px;padding:6px 12px;color:#8b949e;font-size:0.78rem;cursor:pointer;width:100%;text-align:center;transition:border-color .15s,color .15s}
+    .add-bullet-btn:hover{border-color:#8b949e;color:#e6edf3}
+
+    /* ── Accessory checkboxes ── */
+    .acc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+    .acc-chip{display:flex;align-items:center;gap:6px;padding:5px 10px;background:#0d1117;border:1px solid #30363d;border-radius:7px;cursor:pointer;font-size:0.78rem;color:#8b949e;transition:border-color .15s,color .15s,background .15s;user-select:none}
+    .acc-chip input{display:none}
+    .acc-chip.checked{border-color:#3fb950;background:#0d4a1e;color:#3fb950}
+
+    /* ── Rules ── */
+    .rule-card{background:#161b22;border:1px solid #21262d;border-radius:10px;margin-bottom:8px;overflow:hidden}
+    .rule-card-hdr{padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+    .rule-card-hdr:hover{background:#1c2128}
+    .rule-card-title{flex:1;font-size:0.82rem;font-weight:600;color:#e6edf3}
+    .rule-card-meta{font-size:0.72rem;color:#484f58}
+    .rule-card-body{display:none;padding:16px;border-top:1px solid #21262d}
+    .rule-card-body.open{display:block}
+    .cond-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+    @media(max-width:600px){.cond-grid{grid-template-columns:1fr 1fr}}
+    .products-order{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+    .prod-order-item{display:flex;align-items:center;gap:8px;background:#0d1117;border:1px solid #30363d;border-radius:7px;padding:7px 10px;font-size:0.82rem;color:#e6edf3}
+    .prod-order-item select{flex:1;background:#0d1117;border:none;color:#e6edf3;font-size:0.82rem;outline:none}
+    .prod-order-del{background:none;border:none;color:#484f58;cursor:pointer;font-size:0.9rem}
+    .prod-order-del:hover{color:#f85149}
+    .fallback-box{background:#1c1700;border:1px solid #3a2a00;border-radius:8px;padding:12px;margin-top:10px}
+    .fallback-box label{color:#d1a400}
+
+    /* ── Quiz Results ── */
+    .qr-table{width:100%;border-collapse:collapse;font-size:0.8rem}
+    .qr-table th{text-align:left;padding:8px 10px;border-bottom:1px solid #21262d;color:#8b949e;font-weight:600;font-size:0.72rem;text-transform:uppercase;letter-spacing:.04em}
+    .qr-table td{padding:8px 10px;border-bottom:1px solid #161b22;color:#c9d1d9;vertical-align:top}
+    .qr-table tr:hover td{background:#161b22}
+    .tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:0.7rem;font-weight:600;background:#21262d;color:#8b949e;margin:1px}
+    .tag.cam{background:#0d3a6e;color:#79c0ff}
+    .tag.result{background:#0d4a1e;color:#3fb950}
+
+    /* ── Save bar ── */
+    .save-bar{position:sticky;bottom:0;background:#0d1117;border-top:1px solid #21262d;padding:14px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px}
+    .save-status{font-size:0.8rem;color:#8b949e}
+    .save-status.ok{color:#3fb950}
+    .save-status.err{color:#f85149}
+
+    /* ── Section header ── */
+    .section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .section-hdr h3{font-size:0.9rem;font-weight:700;color:#e6edf3;margin:0}
+  </style>
+</head>
+<body>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Finder Config</div>
+      <div class="topbar-sub">Cameras, routing rules, quiz results</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" id="save-btn" onclick="saveConfig()">Save Changes</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="loading" style="padding:40px;text-align:center;color:#484f58">Loading config...</div>
+    <div id="app" style="display:none">
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('cameras',this)">Cameras</button>
+        <button class="tab-btn" onclick="switchTab('accessories',this)">Accessories</button>
+        <button class="tab-btn" onclick="switchTab('install',this)">Install Pricing</button>
+        <button class="tab-btn" onclick="switchTab('rules',this)">Routing Rules</button>
+        <button class="tab-btn" onclick="switchTab('results',this)">Quiz Results</button>
+      </div>
+
+      <!-- ── CAMERAS TAB ── -->
+      <div class="tab-pane active" id="tab-cameras">
+        <div class="section-hdr">
+          <h3>Cameras</h3>
+          <button class="btn btn-sm" onclick="addCamera()">+ Add Camera</button>
+        </div>
+        <div id="cameras-list"></div>
+      </div>
+
+      <!-- ── ACCESSORIES TAB ── -->
+      <div class="tab-pane" id="tab-accessories">
+        <div class="section-hdr">
+          <h3>Accessories</h3>
+          <button class="btn btn-sm" onclick="addAccessory()">+ Add Accessory</button>
+        </div>
+        <div id="accessories-list"></div>
+      </div>
+
+      <!-- ── INSTALL PRICING TAB ── -->
+      <div class="tab-pane" id="tab-install">
+        <h3 style="font-size:0.9rem;font-weight:700;color:#e6edf3;margin-bottom:18px">Install Pricing</h3>
+        <div id="install-form"></div>
+      </div>
+
+      <!-- ── ROUTING RULES TAB ── -->
+      <div class="tab-pane" id="tab-rules">
+        <div class="section-hdr">
+          <h3>Routing Rules</h3>
+          <button class="btn btn-sm" onclick="addRule()">+ Add Rule</button>
+        </div>
+        <div id="rules-list"></div>
+      </div>
+
+      <!-- ── QUIZ RESULTS TAB ── -->
+      <div class="tab-pane" id="tab-results">
+        <div class="section-hdr">
+          <h3>Quiz Results</h3>
+          <button class="btn btn-sm" onclick="loadResults()">Refresh</button>
+        </div>
+        <div id="results-table"></div>
+      </div>
+
+      <!-- Save bar -->
+      <div class="save-bar">
+        <span class="save-status" id="save-status"></span>
+        <button class="btn btn-primary" onclick="saveConfig()">Save Changes</button>
+      </div>
+
+    </div><!-- #app -->
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, renderShell } from './shell.js';
+import { api, WORKER_URL } from './config.js';
+
+if (!requireAuth()) throw new Error('unauth');
+renderShell({ active: 'finder' });
+
+// ── State ──
+let CFG = null;  // the live config object
+
+// ── Boot ──
+async function init() {
+  try {
+    const res = await api('/admin/finder-config');
+    if (res.ok) {
+      CFG = await res.json();
+    } else {
+      // No config saved yet — seed from default
+      CFG = getDefaultConfig();
+    }
+    renderAll();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  } catch(e) {
+    document.getElementById('loading').textContent = 'Failed to load config. ' + e.message;
+  }
+}
+init();
+
+// ── Tab switching ──
+window.switchTab = function(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'results') loadResults();
+};
+
+// ── Render everything ──
+function renderAll() {
+  renderCameras();
+  renderAccessories();
+  renderInstall();
+  renderRules();
+}
+
+// ════════════════════════════════════════
+//  CAMERAS
+// ════════════════════════════════════════
+function renderCameras() {
+  const el = document.getElementById('cameras-list');
+  const keys = Object.keys(CFG.products);
+  if (!keys.length) { el.innerHTML = '<div style="color:#484f58;font-size:0.85rem">No cameras yet.</div>'; return; }
+  el.innerHTML = keys.map(k => camCardHtml(k, CFG.products[k])).join('');
+}
+
+function camCardHtml(key, cam) {
+  const accKeys = Object.keys(CFG.accessories || {});
+  const accChips = accKeys.map(ak => {
+    const checked = (cam.accessories || []).includes(ak) ? 'checked' : '';
+    return `<label class="acc-chip ${checked}" id="acc-chip-${key}-${ak}">
+      <input type="checkbox" ${checked} onchange="toggleAcc('${key}','${ak}',this)"> ${CFG.accessories[ak].label}
+    </label>`;
+  }).join('');
+
+  const includedVal = (cam.included || []).join('\n');
+  const bulletItems = (cam.why || []).map((b,i) => bulletItemHtml(key, i, b)).join('');
+
+  return `<div class="cam-card" id="camcard-${key}">
+    <div class="cam-card-hdr" onclick="toggleCard('camcard-${key}')">
+      <span class="cam-card-name">${cam.name || key}</span>
+      <span class="cam-card-meta">${cam.channels}ch · ${cam.handle || '—'}</span>
+      <span class="chevron" id="chev-camcard-${key}">▼</span>
+    </div>
+    <div class="cam-card-body" id="body-camcard-${key}">
+      <div class="frow-row">
+        <div class="frow">
+          <label>Internal Key (slug)</label>
+          <input value="${key}" onchange="renameCamera('${key}',this.value)" placeholder="e.g. a229_pro_2ch">
+        </div>
+        <div class="frow">
+          <label>Channels</label>
+          <select onchange="setCamField('${key}','channels',parseInt(this.value))">
+            <option value="1" ${cam.channels==1?'selected':''}>1</option>
+            <option value="2" ${cam.channels==2?'selected':''}>2</option>
+            <option value="3" ${cam.channels==3?'selected':''}>3</option>
+          </select>
+        </div>
+      </div>
+      <div class="frow">
+        <label>Display Name</label>
+        <input value="${escHtml(cam.name||'')}" oninput="setCamField('${key}','name',this.value)" placeholder="e.g. VIOFO A229 PRO 2-Channel">
+      </div>
+      <div class="frow">
+        <label>Shopify Product Handle</label>
+        <input value="${escHtml(cam.handle||'')}" oninput="setCamField('${key}','handle',this.value)" placeholder="e.g. viofo-a229-pro-2ch">
+      </div>
+      <div class="frow">
+        <label>Accessories (priced add-ons)</label>
+        <div class="acc-grid">${accChips || '<span style="color:#484f58;font-size:0.78rem">Add accessories in the Accessories tab first.</span>'}</div>
+      </div>
+      <div class="frow">
+        <label>Included items (shown as "Included" — one per line)</label>
+        <textarea rows="3" oninput="setCamIncluded('${key}',this.value)" placeholder="Hardwire Kit\n64GB microSD Card">${escHtml(includedVal)}</textarea>
+      </div>
+      <div class="frow">
+        <label>Why it's right for you — bullets</label>
+        <div class="bullet-list" id="bullets-${key}">${bulletItems}</div>
+        <button class="add-bullet-btn" onclick="addBullet('${key}')">+ Add bullet</button>
+      </div>
+      <button class="btn btn-sm" style="background:#3a0d0d;border-color:#6e1a1a;color:#f85149;margin-top:8px" onclick="deleteCamera('${key}')">Delete Camera</button>
+    </div>
+  </div>`;
+}
+
+function bulletItemHtml(camKey, idx, text) {
+  return `<div class="bullet-item" id="bi-${camKey}-${idx}">
+    <input value="${escHtml(text)}" oninput="setBullet('${camKey}',${idx},this.value)" placeholder="Bullet text...">
+    <button class="bullet-del" onclick="removeBullet('${camKey}',${idx})">✕</button>
+  </div>`;
+}
+
+window.toggleCard = function(id) {
+  const body = document.getElementById('body-' + id);
+  const chev = document.getElementById('chev-' + id);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+};
+
+window.setCamField = function(key, field, val) {
+  CFG.products[key][field] = val;
+};
+
+window.setCamIncluded = function(key, val) {
+  CFG.products[key].included = val.split('\n').map(s=>s.trim()).filter(Boolean);
+};
+
+window.toggleAcc = function(camKey, accKey, cb) {
+  const chip = document.getElementById('acc-chip-' + camKey + '-' + accKey);
+  if (cb.checked) {
+    chip.classList.add('checked');
+    if (!CFG.products[camKey].accessories) CFG.products[camKey].accessories = [];
+    if (!CFG.products[camKey].accessories.includes(accKey)) CFG.products[camKey].accessories.push(accKey);
+  } else {
+    chip.classList.remove('checked');
+    CFG.products[camKey].accessories = (CFG.products[camKey].accessories||[]).filter(k=>k!==accKey);
+  }
+};
+
+window.setBullet = function(key, idx, val) {
+  CFG.products[key].why[idx] = val;
+};
+
+window.addBullet = function(key) {
+  if (!CFG.products[key].why) CFG.products[key].why = [];
+  const idx = CFG.products[key].why.length;
+  CFG.products[key].why.push('');
+  const list = document.getElementById('bullets-' + key);
+  const div = document.createElement('div');
+  div.innerHTML = bulletItemHtml(key, idx, '');
+  list.appendChild(div.firstElementChild);
+  list.lastElementChild.querySelector('input').focus();
+};
+
+window.removeBullet = function(key, idx) {
+  CFG.products[key].why.splice(idx, 1);
+  renderCameras();
+};
+
+window.renameCamera = function(oldKey, newKey) {
+  newKey = newKey.trim().replace(/\s+/g,'_').toLowerCase();
+  if (!newKey || newKey === oldKey) return;
+  if (CFG.products[newKey]) { alert('Key already exists.'); return; }
+  const entries = Object.entries(CFG.products);
+  CFG.products = Object.fromEntries(entries.map(([k,v]) => [k===oldKey ? newKey : k, v]));
+  // Update rules that reference old key
+  CFG.rules.forEach(r => {
+    if (r.products) r.products = r.products.map(p => p===oldKey ? newKey : p);
+  });
+  renderAll();
+};
+
+window.deleteCamera = function(key) {
+  if (!confirm('Delete camera "' + key + '"? This will also remove it from routing rules.')) return;
+  delete CFG.products[key];
+  CFG.rules.forEach(r => { if (r.products) r.products = r.products.filter(p=>p!==key); });
+  renderAll();
+};
+
+window.addCamera = function() {
+  const key = 'new_camera_' + Date.now();
+  CFG.products[key] = { handle:'', name:'New Camera', channels:1, accessories:[], why:[] };
+  renderCameras();
+  // Open the new card
+  setTimeout(() => {
+    const card = document.getElementById('camcard-' + key);
+    if (card) { toggleCard('camcard-' + key); card.scrollIntoView({behavior:'smooth',block:'start'}); }
+  }, 50);
+};
+
+// ════════════════════════════════════════
+//  ACCESSORIES
+// ════════════════════════════════════════
+function renderAccessories() {
+  const el = document.getElementById('accessories-list');
+  const keys = Object.keys(CFG.accessories || {});
+  if (!keys.length) { el.innerHTML = '<div style="color:#484f58;font-size:0.85rem">No accessories yet.</div>'; return; }
+  el.innerHTML = keys.map(k => accRowHtml(k, CFG.accessories[k])).join('');
+}
+
+function accRowHtml(key, acc) {
+  return `<div class="cam-card" style="margin-bottom:8px">
+    <div style="padding:14px 18px;display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div class="frow" style="flex:1;min-width:140px;margin:0">
+        <label>Key</label>
+        <input value="${escHtml(key)}" onchange="renameAcc('${key}',this.value)" placeholder="e.g. viofo_hk4">
+      </div>
+      <div class="frow" style="flex:2;min-width:180px;margin:0">
+        <label>Display Label</label>
+        <input value="${escHtml(acc.label||'')}" oninput="setAccField('${key}','label',this.value)" placeholder="e.g. Hardwire Kit">
+      </div>
+      <div class="frow" style="flex:3;min-width:220px;margin:0">
+        <label>Shopify Product Handle</label>
+        <input value="${escHtml(acc.handle||'')}" oninput="setAccField('${key}','handle',this.value)" placeholder="e.g. viofo-type-c-hk4-hardwire-kit">
+      </div>
+      <button class="btn btn-sm" style="background:#3a0d0d;border-color:#6e1a1a;color:#f85149;margin-top:18px;flex-shrink:0" onclick="deleteAcc('${key}')">Delete</button>
+    </div>
+  </div>`;
+}
+
+window.setAccField = function(key, field, val) { CFG.accessories[key][field] = val; };
+
+window.renameAcc = function(oldKey, newKey) {
+  newKey = newKey.trim().replace(/\s+/g,'_').toLowerCase();
+  if (!newKey || newKey === oldKey) return;
+  if (CFG.accessories[newKey]) { alert('Key already exists.'); return; }
+  const entries = Object.entries(CFG.accessories);
+  CFG.accessories = Object.fromEntries(entries.map(([k,v]) => [k===oldKey?newKey:k, v]));
+  Object.values(CFG.products).forEach(p => {
+    if (p.accessories) p.accessories = p.accessories.map(a => a===oldKey?newKey:a);
+  });
+  renderAccessories();
+  renderCameras();
+};
+
+window.deleteAcc = function(key) {
+  if (!confirm('Delete accessory "' + key + '"?')) return;
+  delete CFG.accessories[key];
+  Object.values(CFG.products).forEach(p => {
+    if (p.accessories) p.accessories = p.accessories.filter(a=>a!==key);
+  });
+  renderAccessories();
+  renderCameras();
+};
+
+window.addAccessory = function() {
+  const key = 'new_acc_' + Date.now();
+  CFG.accessories[key] = { handle:'', label:'New Accessory' };
+  renderAccessories();
+};
+
+// ════════════════════════════════════════
+//  INSTALL PRICING
+// ════════════════════════════════════════
+function renderInstall() {
+  const ins = CFG.install || {};
+  const oc = ins.own_camera || {};
+  document.getElementById('install-form').innerHTML = `
+    <div class="cam-card" style="padding:18px">
+      <div class="frow">
+        <label>Install Service — Shopify Product Handle</label>
+        <input id="ins-handle" value="${escHtml(oc.handle||'')}" oninput="setInstallHandle(this.value)" placeholder="e.g. installation-service">
+      </div>
+      <div class="frow-row">
+        <div class="frow">
+          <label>1-Channel — Variant Index</label>
+          <input type="number" min="0" value="${oc[1]?.variant ?? 0}" oninput="setInstallVariant(1,parseInt(this.value))">
+        </div>
+        <div class="frow">
+          <label>2-Channel — Variant Index</label>
+          <input type="number" min="0" value="${oc[2]?.variant ?? 1}" oninput="setInstallVariant(2,parseInt(this.value))">
+        </div>
+      </div>
+      <div class="frow-row">
+        <div class="frow">
+          <label>3-Channel — Variant Index</label>
+          <input type="number" min="0" value="${oc[3]?.variant ?? 2}" oninput="setInstallVariant(3,parseInt(this.value))">
+        </div>
+        <div class="frow">
+          <label>BYO Surcharge ($)</label>
+          <input type="number" min="0" value="${ins.byo_surcharge ?? 100}" oninput="CFG.install.byo_surcharge=parseInt(this.value)">
+        </div>
+      </div>
+      <div class="frow">
+        <label>BYO Booking URL</label>
+        <input value="${escHtml(ins.byo_book_url||'/pages/contact')}" oninput="CFG.install.byo_book_url=this.value" placeholder="/pages/contact">
+      </div>
+      <div style="border-top:1px solid #21262d;margin:16px 0;padding-top:16px">
+        <div style="font-size:0.78rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:14px">Vehicle Surcharges</div>
+        <div class="frow-row">
+          <div class="frow">
+            <label>European — Shopify Handle</label>
+            <input value="${escHtml(CFG.surcharges?.european?.handle||'')}" oninput="setSurcharge('european','handle',this.value)">
+          </div>
+          <div class="frow">
+            <label>European — Label</label>
+            <input value="${escHtml(CFG.surcharges?.european?.label||'')}" oninput="setSurcharge('european','label',this.value)">
+          </div>
+        </div>
+        <div class="frow-row">
+          <div class="frow">
+            <label>Exotic — Shopify Handle</label>
+            <input value="${escHtml(CFG.surcharges?.exotic?.handle||'')}" oninput="setSurcharge('exotic','handle',this.value)">
+          </div>
+          <div class="frow">
+            <label>Exotic — Label</label>
+            <input value="${escHtml(CFG.surcharges?.exotic?.label||'')}" oninput="setSurcharge('exotic','label',this.value)">
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+window.setInstallHandle = function(v) { if (!CFG.install.own_camera) CFG.install.own_camera={}; CFG.install.own_camera.handle=v; };
+window.setInstallVariant = function(ch, v) { if (!CFG.install.own_camera[ch]) CFG.install.own_camera[ch]={}; CFG.install.own_camera[ch].variant=v; };
+window.setSurcharge = function(tier, field, v) { if (!CFG.surcharges) CFG.surcharges={}; if (!CFG.surcharges[tier]) CFG.surcharges[tier]={}; CFG.surcharges[tier][field]=v; };
+
+// ════════════════════════════════════════
+//  ROUTING RULES
+// ════════════════════════════════════════
+const CAMERAS_OPTS = { front_only:'Front only', front_rear:'Front + rear', three_ch:'3-channel', byo:'BYO' };
+const QUALITY_OPTS = { '':'(any)', high_res:'License plate detail', clear:'Clear incident footage' };
+const PARKING_OPTS = { '':'(any)', basic:'None / few hours', extended:'Extended overnight' };
+const BYO_CH_OPTS  = { '':'(any)', '1ch':'1ch', '2ch':'2ch', '3ch':'3ch' };
+const VEH_OPTS     = { '':'(any)', standard:'Standard', european:'European', exotic:'Exotic' };
+
+function renderRules() {
+  const el = document.getElementById('rules-list');
+  if (!CFG.rules.length) { el.innerHTML = '<div style="color:#484f58;font-size:0.85rem">No rules yet.</div>'; return; }
+  el.innerHTML = CFG.rules.map((r,i) => ruleCardHtml(r,i)).join('');
+}
+
+function ruleCondSummary(r) {
+  const c = r.conditions || {};
+  const parts = [];
+  if (c.cameras)     parts.push(CAMERAS_OPTS[c.cameras]||c.cameras);
+  if (c.quality)     parts.push(QUALITY_OPTS[c.quality]||c.quality);
+  if (c.parking)     parts.push(PARKING_OPTS[c.parking]||c.parking);
+  if (c.byo_channels) parts.push(BYO_CH_OPTS[c.byo_channels]||c.byo_channels);
+  if (c.vehicle)     parts.push(VEH_OPTS[c.vehicle]||c.vehicle);
+  return parts.join(' · ') || 'No conditions';
+}
+
+function ruleCardHtml(r, i) {
+  const c = r.conditions || {};
+  const camKeys = Object.keys(CFG.products);
+
+  const prodRows = (r.products||[]).map((p,pi) => `
+    <div class="prod-order-item">
+      <span style="color:#484f58;font-size:0.72rem;min-width:16px">${pi+1}</span>
+      <select onchange="setRuleProduct(${i},${pi},this.value)">
+        ${camKeys.map(k=>`<option value="${k}" ${p===k?'selected':''}>${CFG.products[k]?.name||k}</option>`).join('')}
+      </select>
+      <button class="prod-order-del" onclick="removeRuleProduct(${i},${pi})">✕</button>
+    </div>`).join('');
+
+  const isBYO = !!r.install_only;
+
+  return `<div class="rule-card" id="rulecard-${i}">
+    <div class="rule-card-hdr" onclick="toggleCard('rulecard-${i}')">
+      <span style="color:#484f58;font-size:0.72rem;min-width:20px">${i+1}</span>
+      <span class="rule-card-title">${ruleCondSummary(r)}</span>
+      <span class="rule-card-meta">${isBYO ? 'BYO install' : (r.products||[]).length + ' camera(s)'}</span>
+      <span class="chevron" id="chev-rulecard-${i}">▼</span>
+    </div>
+    <div class="rule-card-body" id="body-rulecard-${i}">
+      <div style="font-size:0.74rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Conditions (all must match)</div>
+      <div class="cond-grid">
+        ${condSelect('Cameras', i, 'cameras', c.cameras||'', CAMERAS_OPTS)}
+        ${condSelect('Quality', i, 'quality', c.quality||'', QUALITY_OPTS)}
+        ${condSelect('Parking', i, 'parking', c.parking||'', PARKING_OPTS)}
+        ${condSelect('BYO Channels', i, 'byo_channels', c.byo_channels||'', BYO_CH_OPTS)}
+        ${condSelect('Vehicle tier', i, 'vehicle', c.vehicle||'', VEH_OPTS)}
+        <div class="frow" style="margin:0">
+          <label>Max shown</label>
+          <select onchange="setRuleField(${i},'max_show',parseInt(this.value))">
+            <option value="1" ${(r.max_show||1)==1?'selected':''}>1</option>
+            <option value="2" ${r.max_show==2?'selected':''}>2</option>
+            <option value="3" ${r.max_show==3?'selected':''}>3</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.82rem;color:#c9d1d9">
+          <input type="checkbox" ${isBYO?'checked':''} onchange="setRuleField(${i},'install_only',this.checked)"> BYO / install-only rule
+        </label>
+        ${isBYO ? `<div class="frow" style="margin:0;flex:1">
+          <label>Channels</label>
+          <select onchange="setRuleField(${i},'channels',parseInt(this.value))">
+            <option value="1" ${r.channels==1?'selected':''}>1</option>
+            <option value="2" ${r.channels==2?'selected':''}>2</option>
+            <option value="3" ${r.channels==3?'selected':''}>3</option>
+          </select>
+        </div>` : ''}
+      </div>
+
+      ${!isBYO ? `<div>
+        <div style="font-size:0.74rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Cameras (in display order — first = shown first)</div>
+        <div class="products-order" id="rule-prods-${i}">${prodRows}</div>
+        <button class="add-bullet-btn" style="margin-top:6px" onclick="addRuleProduct(${i})">+ Add camera</button>
+      </div>` : ''}
+
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:0.82rem;color:#c9d1d9">
+          <input type="checkbox" ${r.fallback?'checked':''} onchange="setRuleFallback(${i},this.checked)"> No exact match — show fallback banner
+        </label>
+      </div>
+      ${r.fallback ? `<div class="fallback-box">
+        <div class="frow" style="margin:0">
+          <label style="color:#d1a400">Fallback banner message</label>
+          <textarea oninput="setRuleField(${i},'fallback_note',this.value)">${escHtml(r.fallback_note||'')}</textarea>
+        </div>
+      </div>` : ''}
+
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-sm" onclick="moveRule(${i},-1)" ${i===0?'disabled':''}>↑ Move up</button>
+        <button class="btn btn-sm" onclick="moveRule(${i},1)" ${i===CFG.rules.length-1?'disabled':''}>↓ Move down</button>
+        <button class="btn btn-sm" style="background:#3a0d0d;border-color:#6e1a1a;color:#f85149;margin-left:auto" onclick="deleteRule(${i})">Delete Rule</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function condSelect(label, ruleIdx, field, val, opts) {
+  return `<div class="frow" style="margin:0">
+    <label>${label}</label>
+    <select onchange="setRuleCond(${ruleIdx},'${field}',this.value)">
+      ${Object.entries(opts).map(([k,v])=>`<option value="${k}" ${val===k?'selected':''}>${v}</option>`).join('')}
+    </select>
+  </div>`;
+}
+
+window.setRuleCond = function(i, field, val) {
+  if (!CFG.rules[i].conditions) CFG.rules[i].conditions = {};
+  if (val === '') delete CFG.rules[i].conditions[field];
+  else CFG.rules[i].conditions[field] = val;
+  document.querySelector(`#rulecard-${i} .rule-card-title`).textContent = ruleCondSummary(CFG.rules[i]);
+};
+window.setRuleField = function(i, field, val) { CFG.rules[i][field] = val; renderRules(); };
+window.setRuleFallback = function(i, checked) { CFG.rules[i].fallback = checked; if (!checked) delete CFG.rules[i].fallback_note; renderRules(); };
+window.setRuleProduct = function(i, pi, val) { CFG.rules[i].products[pi] = val; };
+window.addRuleProduct = function(i) {
+  if (!CFG.rules[i].products) CFG.rules[i].products = [];
+  const firstKey = Object.keys(CFG.products)[0] || '';
+  CFG.rules[i].products.push(firstKey);
+  renderRules();
+};
+window.removeRuleProduct = function(i, pi) { CFG.rules[i].products.splice(pi,1); renderRules(); };
+window.moveRule = function(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= CFG.rules.length) return;
+  [CFG.rules[i], CFG.rules[j]] = [CFG.rules[j], CFG.rules[i]];
+  renderRules();
+};
+window.deleteRule = function(i) {
+  if (!confirm('Delete this rule?')) return;
+  CFG.rules.splice(i,1);
+  renderRules();
+};
+window.addRule = function() {
+  CFG.rules.push({ conditions:{}, products:[], max_show:1 });
+  renderRules();
+  setTimeout(()=>{ const c=document.getElementById('rulecard-'+(CFG.rules.length-1)); if(c){toggleCard('rulecard-'+(CFG.rules.length-1));c.scrollIntoView({behavior:'smooth',block:'start'}); }},50);
+};
+
+// ════════════════════════════════════════
+//  QUIZ RESULTS
+// ════════════════════════════════════════
+window.loadResults = async function() {
+  const el = document.getElementById('results-table');
+  el.innerHTML = '<div style="color:#484f58;padding:20px 0">Loading...</div>';
+  try {
+    const res = await api('/admin/quiz-results?limit=200');
+    const rows = await res.json();
+    if (!rows.length) { el.innerHTML = '<div style="color:#484f58;padding:20px 0">No results yet.</div>'; return; }
+    el.innerHTML = `<div style="overflow-x:auto"><table class="qr-table">
+      <thead><tr>
+        <th>Date</th><th>Cameras</th><th>Quality</th><th>Parking</th><th>Vehicle</th><th>BYO Ch</th><th>Results</th>
+      </tr></thead>
+      <tbody>${rows.map(r => {
+        const results = JSON.parse(r.results||'[]');
+        const ts = r.ts ? new Date(r.ts).toLocaleDateString() : '—';
+        return `<tr>
+          <td style="white-space:nowrap">${ts}</td>
+          <td><span class="tag cam">${r.cameras||'—'}</span></td>
+          <td>${r.quality||'—'}</td>
+          <td>${r.parking||'—'}</td>
+          <td>${r.vehicle_tier||'—'}</td>
+          <td>${r.byo_channels||'—'}</td>
+          <td>${results.map(k=>`<span class="tag result">${k}</span>`).join('')}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  } catch(e) {
+    el.innerHTML = '<div style="color:#f85149">Failed to load results.</div>';
+  }
+};
+
+// ════════════════════════════════════════
+//  SAVE
+// ════════════════════════════════════════
+window.saveConfig = async function() {
+  const status = document.getElementById('save-status');
+  const btn = document.getElementById('save-btn');
+  status.textContent = 'Saving...';
+  status.className = 'save-status';
+  btn.disabled = true;
+  try {
+    const res = await api('/admin/finder-config', { method:'PUT', body: JSON.stringify(CFG) });
+    if (res.ok) {
+      status.textContent = 'Saved successfully';
+      status.className = 'save-status ok';
+    } else {
+      const err = await res.json();
+      status.textContent = 'Error: ' + (err.error || res.status);
+      status.className = 'save-status err';
+    }
+  } catch(e) {
+    status.textContent = 'Save failed: ' + e.message;
+    status.className = 'save-status err';
+  }
+  btn.disabled = false;
+  setTimeout(()=>{ status.textContent=''; status.className='save-status'; }, 4000);
+};
+
+// ── Helpers ──
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ════════════════════════════════════════
+//  DEFAULT CONFIG (seed when nothing saved)
+// ════════════════════════════════════════
+function getDefaultConfig() {
+  return {
+    products: {
+      a119m_pro: { handle:'viofo-a119m-pro-4k-hdr-mini-dash-camera', name:'VIOFO A119M Pro', channels:1, accessories:['viofo_sd_128','viofo_hk4'], why:['4K resolution w/ HDR technology captures license plates day and night','Ultra-compact mini form factor','Up to three hours of parking recording'] },
+      a229_pro_1ch: { handle:'viofo-a229-pro-4k-hdr-1-channel-dashcam', name:'VIOFO A229 PRO 1-Channel', channels:1, accessories:['viofo_sd_128','viofo_hk4'], why:['4K resolution w/ HDR technology captures license plates day and night','Up to three hours of parking recording'] },
+      a329s_1ch: { handle:'viofo-a329s-4k-hdr-1-channel-dashcam', name:'VIOFO A329S 1-Channel', channels:1, accessories:['viofo_sd_128','viofo_hk4'], why:['4K resolution w/ HDR technology captures license plates day and night','Low-power parking mode for up to 12 hours of IMPACT DETECTION parking recording with minimal battery draw'] },
+      a229_plus_2ch: { handle:'viofo-a229-plus-2-channel', name:'VIOFO A229 Plus 2-Channel', channels:2, accessories:['viofo_sd_128','viofo_hk4'], why:['2K front + 2K rear: full front and back coverage','Up to three hours of parking recording'] },
+      a229_pro_2ch: { handle:'viofo-a229-pro-2ch', name:'VIOFO A229 PRO 2-Channel', channels:2, accessories:['viofo_sd_128','viofo_hk4'], why:['4K front + 2K rear resolution for capturing license plates day and night','Up to three hours of parking recording'] },
+      a329s_2ch: { handle:'viofo-a329s-2ch', name:'VIOFO A329S 2-Channel', channels:2, accessories:['viofo_sd_128','viofo_hk4'], why:['4K front + 2K rear resolution for capturing license plates day and night','Low-power parking mode for up to 12 hours of IMPACT DETECTION parking recording with minimal battery draw'] },
+      vueroid_s1_2ch: { handle:'vueroid-s1-4k-2-channel-dash-cam', name:'Vueroid S1 2-Channel', channels:2, accessories:['vueroid_sd_128'], included:['Hardwire Kit'], why:['4K resolution and best-in-class license plate capture, day or night','Hardwire kit included','Industry-leading ultra-low power draw in IMPACT DETECTION parking mode: designed for extended monitoring without draining your battery'] },
+      u3000_pro: { handle:'thinkware-u3000-pro-2-channel', name:'THINKWARE U3000 PRO', channels:2, accessories:[], included:['64GB microSD Card','Hardwire Kit'], why:['4K front + 2K rear resolution for capturing license plates day and night','Up to 12 hours of MOTION DETECTION parking mode','SD card and hardwire kit included'] },
+      a229_plus_3ch: { handle:'viofo-a229-plus-3-channel-dash-cam', name:'VIOFO A229 Plus 3-Channel', channels:3, accessories:['viofo_sd_128','viofo_hk4'], why:['2K front + 2K rear + 1080p Interior: full vehicle coverage','Up to three hours of parking recording'] },
+      a229_pro_3ch: { handle:'viofo-a229-pro-3ch', name:'VIOFO A229 PRO 3-Channel', channels:3, accessories:['viofo_sd_128','viofo_hk4'], why:['4K front + 2K rear + 1080p Interior: capture license plates and rest easy with full vehicle coverage','Up to three hours of parking recording'] },
+      a329s_3ch: { handle:'viofo-a329s-3ch', name:'VIOFO A329S 3-Channel', channels:3, accessories:['viofo_sd_128','viofo_hk4'], why:['4K front + 2K rear resolution for capturing license plates day and night','Low-power parking mode for up to 12 hours of IMPACT DETECTION parking recording with minimal battery draw','Ultra-wide angle interior lens for maximum coverage'] },
+      vueroid_s1_3ch: { handle:'vueroid-s1-4k-3-channel-dash-cam', name:'Vueroid S1 3-Channel', channels:3, accessories:['vueroid_sd_128'], included:['Hardwire Kit'], why:['4K resolution and best-in-class license plate capture, day or night','Wide angle interior lens for greater coverage','Hardwire kit included','Industry-leading ultra-low power draw in IMPACT DETECTION parking mode: designed for extended monitoring without draining your battery'] },
+    },
+    accessories: {
+      viofo_hk4:      { handle:'viofo-type-c-hk4-hardwire-kit-for-a119-mini-2-a229-duo-a229-plus-a229-pro-t130-wm1', label:'Hardwire Kit' },
+      viofo_sd_128:   { handle:'viofo-128gb-industrial-grade-microsd-card', label:'128GB microSD Card' },
+      vueroid_sd_128: { handle:'vueroid-128gb-dashcam-pro-sd-card-for-s1', label:'128GB SD Card' },
+    },
+    install: {
+      own_camera: { handle:'installation-service', 1:{variant:0}, 2:{variant:1}, 3:{variant:2} },
+      byo_surcharge: 100,
+      byo_book_url: '/pages/contact',
+    },
+    surcharges: {
+      european: { handle:'german-vehicle', label:'European vehicle surcharge' },
+      exotic:   { handle:'exotic-vehicle', label:'Exotic / specialty vehicle surcharge' },
+    },
+    questions: [
+      { id:'cameras', text:'How many cameras do you want?', sub:'Choose based on the coverage you need -- or select the last option if you already have a camera.', options:[{id:'front_only',label:'Front camera only',desc:'Captures what is ahead -- great for most drivers'},{id:'front_rear',label:'Front + rear cameras',desc:'Full road coverage front and back -- our most popular setup'},{id:'three_ch',label:'Front + rear + interior',desc:'Adds cabin view -- popular for rideshare and fleet drivers'},{id:'byo',label:'I already have a camera',desc:'Just need professional installation of my existing camera'}] },
+      { id:'quality', text:'What matters most for your footage?', condition:{q:'cameras',exclude:['byo']}, options:[{id:'clear',label:'Clear incident footage',desc:'Solid clarity for insurance claims and accident documentation'},{id:'high_res',label:'License plate detail',desc:'High-res capture to read plates clearly from a distance'}] },
+      { id:'parking', text:'How much parking protection do you need?', condition:{q:'cameras',exclude:['byo']}, options:[{id:'basic',label:'None / a few hours is fine',desc:'I mainly need coverage while driving'},{id:'extended',label:'Extended overnight recording',desc:'I park in public and want all-night protection'}] },
+      { id:'byo_channels', text:'How many channels does your camera have?', sub:'Check your camera\'s packaging or manual -- usually labeled 1CH, 2CH, or 3CH.', condition:{q:'cameras',only:['byo']}, options:[{id:'1ch',label:'1 channel',desc:'Front-only camera'},{id:'2ch',label:'2 channels',desc:'Front + rear cameras'},{id:'3ch',label:'3 channels',desc:'Front + rear + one additional camera'}] },
+      { id:'vehicle', type:'brand', text:'What is your vehicle brand?', sub:'Select your brand: some require additional labor or specialized tools.', brands:[{label:'Acura',tier:'standard'},{label:'Alfa Romeo',tier:'european'},{label:'Aston Martin',tier:'exotic'},{label:'Audi',tier:'european'},{label:'Bentley',tier:'exotic'},{label:'BMW',tier:'european'},{label:'Buick',tier:'standard'},{label:'Cadillac',tier:'standard'},{label:'Chevrolet',tier:'standard'},{label:'Chrysler',tier:'standard'},{label:'Dodge',tier:'standard'},{label:'Ferrari',tier:'exotic'},{label:'Fiat',tier:'european'},{label:'Ford',tier:'standard'},{label:'Genesis',tier:'standard'},{label:'GMC',tier:'standard'},{label:'Honda',tier:'standard'},{label:'Hyundai',tier:'standard'},{label:'Infiniti',tier:'standard'},{label:'Jaguar',tier:'european'},{label:'Jeep',tier:'standard'},{label:'Kia',tier:'standard'},{label:'Koenigsegg',tier:'exotic'},{label:'Lamborghini',tier:'exotic'},{label:'Land Rover',tier:'european'},{label:'Lexus',tier:'standard'},{label:'Lincoln',tier:'standard'},{label:'Lotus',tier:'exotic'},{label:'Lucid',tier:'standard'},{label:'Maserati',tier:'exotic'},{label:'Mazda',tier:'standard'},{label:'McLaren',tier:'exotic'},{label:'Mercedes-Benz',tier:'european'},{label:'MINI',tier:'european'},{label:'Mitsubishi',tier:'standard'},{label:'Nissan',tier:'standard'},{label:'Pagani',tier:'exotic'},{label:'Porsche',tier:'european'},{label:'Ram',tier:'standard'},{label:'Rivian',tier:'standard'},{label:'Rolls-Royce',tier:'exotic'},{label:'Subaru',tier:'standard'},{label:'Tesla',tier:'standard'},{label:'Toyota',tier:'standard'},{label:'Volkswagen',tier:'european'},{label:'Volvo',tier:'european'}] },
+    ],
+    rules: [
+      { conditions:{cameras:'front_only',quality:'high_res',parking:'basic'}, products:['a229_pro_1ch','a119m_pro'], max_show:2 },
+      { conditions:{cameras:'front_only',quality:'high_res',parking:'extended'}, products:['a329s_1ch'], max_show:1 },
+      { conditions:{cameras:'front_only',quality:'clear',parking:'basic'}, products:['a119m_pro'], max_show:1, fallback:true, fallback_note:"We don't carry an exact match for your selections -- here's the closest option we have." },
+      { conditions:{cameras:'front_only',quality:'clear',parking:'extended'}, products:['a329s_1ch'], max_show:1, fallback:true, fallback_note:"We don't carry an exact match for your selections -- here's the closest option we have." },
+      { conditions:{cameras:'front_rear',quality:'high_res',parking:'basic'}, products:['a229_pro_2ch'], max_show:1 },
+      { conditions:{cameras:'front_rear',quality:'high_res',parking:'extended'}, products:['a329s_2ch','vueroid_s1_2ch','u3000_pro'], max_show:3 },
+      { conditions:{cameras:'front_rear',quality:'clear',parking:'basic'}, products:['a229_plus_2ch'], max_show:1 },
+      { conditions:{cameras:'front_rear',quality:'clear',parking:'extended'}, products:['a329s_2ch'], max_show:1, fallback:true, fallback_note:"We don't carry an exact match for your selections -- here's the closest option we have." },
+      { conditions:{cameras:'three_ch',quality:'high_res',parking:'basic'}, products:['a229_pro_3ch'], max_show:1 },
+      { conditions:{cameras:'three_ch',quality:'high_res',parking:'extended'}, products:['vueroid_s1_3ch','a329s_3ch'], max_show:2 },
+      { conditions:{cameras:'three_ch',quality:'clear',parking:'basic'}, products:['a229_plus_3ch'], max_show:1 },
+      { conditions:{cameras:'three_ch',quality:'clear',parking:'extended'}, products:['a329s_3ch'], max_show:1, fallback:true, fallback_note:"We don't carry an exact match for your selections -- here's the closest option we have." },
+      { conditions:{cameras:'byo',byo_channels:'1ch'}, install_only:true, channels:1 },
+      { conditions:{cameras:'byo',byo_channels:'2ch'}, install_only:true, channels:2 },
+      { conditions:{cameras:'byo',byo_channels:'3ch'}, install_only:true, channels:3 },
+    ],
+  };
+}
+</script>
+</body>
+</html>
