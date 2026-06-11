@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Appointments — SDC Admin</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .addr-drop{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d0d7de;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:100;max-height:220px;overflow-y:auto}
+    .addr-item{padding:8px 12px;font-size:0.82rem;cursor:pointer;border-bottom:1px solid #f0f0f0;line-height:1.4}
+    .addr-item:last-child{border-bottom:none}
+    .addr-item:hover{background:#f6f8fa}
+  </style>
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -115,7 +121,7 @@ window.loadBookings = async function() {
           <span class="badge ${STATUS_BADGE[b.status] || 'badge-gray'}">${b.status}</span>
         </div>
         <div class="appt-card-meta">
-          <span>${formatDate(b.appointment_date)} · ${formatTime(b.appointment_time)}</span>
+          <span>${formatDate(b.appointment_date)} · ${formatTime(b.appointment_time, b.appointment_end_time)}</span>
           ${b.service_address ? `<span style="color:#484f58">· ${b.service_address}</span>` : ''}
         </div>
         ${b.status === 'pending' ? `
@@ -134,7 +140,7 @@ window.loadBookings = async function() {
           ${bookings.map(b => `
             <tr onclick="openBooking('${b.id}')">
               <td style="font-family:monospace;font-size:0.72rem;color:#484f58">${b.id.slice(0,8)}</td>
-              <td><div style="font-weight:600">${formatDate(b.appointment_date)}</div><div style="font-size:0.72rem;color:#8b949e">${formatTime(b.appointment_time)}</div></td>
+              <td><div style="font-weight:600">${formatDate(b.appointment_date)}</div><div style="font-size:0.72rem;color:#8b949e">${formatTime(b.appointment_time, b.appointment_end_time)}</div></td>
               <td><div style="font-weight:600">${b.customer_name}</div><div style="font-size:0.72rem;color:#8b949e">${b.customer_email || b.customer_phone || ''}</div></td>
               <td style="font-size:0.78rem;color:#8b949e;max-width:200px">${b.service_address || '—'}</td>
               <td><span class="badge ${STATUS_BADGE[b.status] || 'badge-gray'}">${b.status}</span></td>
@@ -170,20 +176,37 @@ window.openBooking = function(id) {
       <div class="form-group" style="margin-bottom:0"><label>Customer Name</label>
         <input type="text" id="edit-name" value="${b.customer_name}">
       </div>
-      <div class="form-group" style="margin-bottom:0"><label>Time</label>
-        <input type="text" id="edit-time" value="${b.appointment_time}">
-      </div>
-    </div>
-    <div class="form-row" style="margin-bottom:16px">
       <div class="form-group" style="margin-bottom:0"><label>Email</label>
         <input type="email" id="edit-email" value="${b.customer_email}">
       </div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
       <div class="form-group" style="margin-bottom:0"><label>Phone</label>
         <input type="text" id="edit-phone" value="${b.customer_phone || ''}">
       </div>
+      <div class="form-group" style="margin-bottom:0"><label>ZIP</label>
+        <input type="text" id="edit-zip" value="${b.zip || ''}">
+      </div>
     </div>
-    <div class="form-group"><label>Service Address</label>
-      <input type="text" id="edit-address" value="${b.service_address || ''}">
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>Start Time</label>
+        <input type="time" id="edit-time" value="${b.appointment_time || ''}">
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label>End Time</label>
+        <input type="time" id="edit-end-time" value="${b.appointment_end_time || ''}">
+      </div>
+    </div>
+    <div class="form-group" style="position:relative"><label>Street Address</label>
+      <input type="text" id="edit-address" value="${b.service_address || ''}" autocomplete="off" oninput="addrSuggest('edit-address','edit-addr-drop')">
+      <div id="edit-addr-drop" class="addr-drop"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>City</label>
+        <input type="text" id="edit-city" value="${b.service_city || ''}">
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label>State</label>
+        <input type="text" id="edit-state" value="${b.service_state || ''}" style="max-width:80px">
+      </div>
     </div>
     <div class="form-group" style="margin-bottom:0"><label>Notes</label>
       <textarea id="edit-notes">${b.notes || ''}</textarea>
@@ -198,6 +221,11 @@ window.openBooking = function(id) {
 };
 
 window.saveBooking = async function() {
+  const city = document.getElementById('edit-city').value.trim();
+  const state = document.getElementById('edit-state').value.trim();
+  const street = document.getElementById('edit-address').value.trim();
+  const zip = document.getElementById('edit-zip').value.trim();
+  const fullAddress = [street, city && state ? `${city}, ${state}` : city || state, zip].filter(Boolean).join(' ');
   const res = await api(`/admin/bookings/${currentId}`, {
     method: 'PATCH',
     body: JSON.stringify({
@@ -205,9 +233,11 @@ window.saveBooking = async function() {
       customer_name: document.getElementById('edit-name').value,
       customer_email: document.getElementById('edit-email').value,
       customer_phone: document.getElementById('edit-phone').value,
-      service_address: document.getElementById('edit-address').value,
+      service_address: fullAddress,
+      zip,
       appointment_date: document.getElementById('edit-date').value,
       appointment_time: document.getElementById('edit-time').value,
+      appointment_end_time: document.getElementById('edit-end-time').value,
       notes: document.getElementById('edit-notes').value,
     }),
   });
@@ -235,10 +265,18 @@ window.openNew = function() {
       <div class="form-group" style="margin-bottom:0"><label>Email</label><input type="email" id="edit-email" placeholder="john@email.com"></div>
       <div class="form-group" style="margin-bottom:0"><label>ZIP *</label><input type="text" id="edit-zip" placeholder="98056"></div>
     </div>
-    <div class="form-group"><label>Service Address *</label><input type="text" id="edit-address" placeholder="123 Main St, Renton WA 98056"></div>
+    <div class="form-group" style="position:relative"><label>Street Address *</label>
+      <input type="text" id="edit-address" placeholder="123 Main St" autocomplete="off" oninput="addrSuggest('edit-address','new-addr-drop')">
+      <div id="new-addr-drop" class="addr-drop"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>City</label><input type="text" id="edit-city" placeholder="Seattle"></div>
+      <div class="form-group" style="margin-bottom:0"><label>State</label><input type="text" id="edit-state" placeholder="WA" style="max-width:80px"></div>
+    </div>
     <div class="form-row" style="margin-bottom:16px">
       <div class="form-group" style="margin-bottom:0"><label>Appointment Date *</label><input type="date" id="edit-date"></div>
-      <div class="form-group" style="margin-bottom:0"><label>Time *</label><input type="time" id="edit-time"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Start Time *</label><input type="time" id="edit-time"></div>
+      <div class="form-group" style="margin-bottom:0"><label>End Time</label><input type="time" id="edit-end-time"></div>
     </div>
     <div class="form-group"><label>Products / What's being installed</label><input type="text" id="edit-products" placeholder="VIOFO A229 Pro 2-Channel, 128GB SD card"></div>
     <div class="form-group"><label>Notes</label><textarea id="edit-notes" placeholder="Gate code, parking instructions, etc."></textarea></div>
@@ -255,8 +293,12 @@ window.createBooking = async function() {
   const phone = document.getElementById('edit-phone').value.trim();
   const date = document.getElementById('edit-date').value;
   const time = document.getElementById('edit-time').value;
-  const address = document.getElementById('edit-address').value.trim();
-  if (!name || !phone || !date || !time || !address) {
+  const street = document.getElementById('edit-address').value.trim();
+  const city = document.getElementById('edit-city').value.trim();
+  const state = document.getElementById('edit-state').value.trim();
+  const zip = document.getElementById('edit-zip').value.trim();
+  const fullAddress = [street, city && state ? `${city}, ${state}` : city || state, zip].filter(Boolean).join(' ');
+  if (!name || !phone || !date || !time || !street) {
     toast('Name, phone, address, date and time are required', true); return;
   }
   const res = await api('/admin/bookings', {
@@ -265,10 +307,11 @@ window.createBooking = async function() {
       customer_name: name,
       customer_email: document.getElementById('edit-email').value.trim(),
       customer_phone: phone,
-      service_address: address,
+      service_address: fullAddress,
       appointment_date: date,
       appointment_time: time,
-      zip: document.getElementById('edit-zip').value.trim(),
+      appointment_end_time: document.getElementById('edit-end-time').value,
+      zip,
       products: document.getElementById('edit-products').value.trim(),
       notes: document.getElementById('edit-notes').value.trim(),
     }),
@@ -308,7 +351,43 @@ window.closeModal = () => document.getElementById('modal').classList.add('hidden
 document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
 
 function formatDate(d) { return new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric', timeZone:'UTC' }); }
-function formatTime(t) { const [h,m] = t.split(':'); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; }
+function fmt12(t) { if (!t) return ''; const [h,m] = t.split(':'); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; }
+function formatTime(t, end) { return end ? `${fmt12(t)} – ${fmt12(end)}` : fmt12(t); }
+
+let addrTimer = null;
+window.addrSuggest = function(inputId, dropId) {
+  clearTimeout(addrTimer);
+  const q = document.getElementById(inputId).value.trim();
+  const drop = document.getElementById(dropId);
+  if (q.length < 5) { drop.innerHTML = ''; drop.style.display = 'none'; return; }
+  addrTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5&countrycodes=us`, { headers: { 'Accept-Language': 'en-US', 'User-Agent': 'SDC-Admin/1.0' } });
+      const results = await res.json();
+      if (!results.length) { drop.innerHTML = ''; drop.style.display = 'none'; return; }
+      drop.innerHTML = results.map((r, i) => `<div class="addr-item" data-i="${i}">${r.display_name}</div>`).join('');
+      drop.style.display = 'block';
+      drop.querySelectorAll('.addr-item').forEach((el, i) => {
+        el.addEventListener('mousedown', e => {
+          e.preventDefault();
+          const a = results[i].address;
+          const street = [a.house_number, a.road].filter(Boolean).join(' ');
+          const city = a.city || a.town || a.village || a.county || '';
+          const state = a.state || '';
+          const zip = a.postcode || '';
+          document.getElementById(inputId).value = street;
+          const cityEl = document.getElementById(inputId.replace('address','city'));
+          const stateEl = document.getElementById(inputId.replace('address','state'));
+          const zipEl = document.getElementById(inputId.replace('address','zip'));
+          if (cityEl) cityEl.value = city;
+          if (stateEl) stateEl.value = state;
+          if (zipEl && zip) zipEl.value = zip;
+          drop.innerHTML = ''; drop.style.display = 'none';
+        });
+      });
+    } catch(e) { drop.innerHTML = ''; drop.style.display = 'none'; }
+  }, 350);
+};
 
 window.toast = function(msg, err=false) {
   const el = document.createElement('div');
