@@ -94,11 +94,10 @@ window.logout = function() {
 
 async function pollSystemStatus() {
   try {
-    const { getSecret } = await import('./config.js');
+    const { getSecret, WORKER_URL } = await import('./config.js');
     const secret = getSecret();
     if (!secret) return;
-    const WORKER = 'https://sdc-worker.mattatseattledashcamsdotcom.workers.dev';
-    const res = await fetch(`${WORKER}/api/health`, {
+    const res = await fetch(`${WORKER_URL}/api/health`, {
       headers: { Authorization: `Bearer ${secret}` }
     });
     const data = await res.json();
