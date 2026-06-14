@@ -48,6 +48,20 @@ export function renderShell({ active }) {
         <small>Seattle Dash Cams</small>
       </div>
       <nav class="sidebar-nav">${sidebarHtml}</nav>
+      <div class="sidebar-status" id="sidebar-status" style="padding:12px 16px;border-top:1px solid #2a2f36;margin-top:auto">
+        <div style="font-size:0.65rem;color:#484f58;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">System Status</div>
+        <div id="status-indicators" style="display:flex;gap:8px;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.7rem;color:#6e7681">
+            <span id="status-worker" style="width:7px;height:7px;border-radius:50%;background:#484f58;flex-shrink:0"></span>Worker
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.7rem;color:#6e7681">
+            <span id="status-db" style="width:7px;height:7px;border-radius:50%;background:#484f58;flex-shrink:0"></span>Database
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.7rem;color:#6e7681">
+            <span id="status-calendar" style="width:7px;height:7px;border-radius:50%;background:#484f58;flex-shrink:0"></span>Calendar
+          </div>
+        </div>
+      </div>
       <div class="sidebar-footer">
         <a href="#" onclick="logout()" style="color:#484f58;text-decoration:none;font-size:0.72rem">Sign out</a>
       </div>
@@ -77,3 +91,29 @@ window.logout = function() {
   localStorage.removeItem('sdc_admin_secret');
   location.href = './login.html';
 };
+
+async function pollSystemStatus() {
+  try {
+    const { getSecret } = await import('./config.js');
+    const secret = getSecret();
+    if (!secret) return;
+    const WORKER = 'https://sdc-worker.mattatseattledashcamsdotcom.workers.dev';
+    const res = await fetch(`${WORKER}/api/health`, {
+      headers: { Authorization: `Bearer ${secret}` }
+    });
+    const data = await res.json();
+    const dot = (id, ok) => {
+      const el = document.getElementById(id);
+      if (el) el.style.background = ok ? '#3fb950' : '#f85149';
+    };
+    dot('status-worker', data.checks?.worker === 'ok');
+    dot('status-db', data.checks?.db === 'ok');
+    dot('status-calendar', data.checks?.calendar === 'ok');
+  } catch (e) {
+    // worker unreachable — leave dots grey
+  }
+}
+
+// Poll on load and every 5 minutes
+requestAnimationFrame(() => setTimeout(pollSystemStatus, 500));
+setInterval(pollSystemStatus, 5 * 60 * 1000);
