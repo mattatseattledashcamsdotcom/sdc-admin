@@ -173,9 +173,10 @@ window.openBooking = function(id) {
   // Default pending bookings to confirmed in the modal
   const defaultStatus = b.status === 'pending' ? 'confirmed' : b.status;
 
-  // Prefill times from slot if the booking doesn't have them stored
-  let startTime = b.appointment_time || '';
-  let endTime = b.appointment_end_time || '';
+  // Prefill times — validate HH:MM format (old bookings may have stored a display string like "3:30 PM - 5:30 PM")
+  const isHHMM = t => /^\d{1,2}:\d{2}$/.test(t || '');
+  let startTime = isHHMM(b.appointment_time) ? b.appointment_time : '';
+  let endTime = isHHMM(b.appointment_end_time) ? b.appointment_end_time : '';
   if ((!startTime || !endTime) && b.slot_id) {
     const slot = slots.find(s => s.id === b.slot_id);
     if (slot) { startTime = startTime || slot.start_time; endTime = endTime || slot.end_time; }
@@ -190,9 +191,14 @@ window.openBooking = function(id) {
     const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     street = street.replace(new RegExp(',?\\s*' + esc(city) + ',?\\s*' + esc(state) + '.*$', 'i'), '').trim().replace(/,\s*$/, '');
   } else if ((!city || !state) && street) {
-    // Old format: try to parse state from "street city, STATE zip"
-    const m = street.match(/^(.*),\s*([A-Z]{2})\s+\d{5}\s*$/);
-    if (m) { street = m[1]; state = m[2]; }
+    // Shopify format: "street, city, STATE, zip"
+    const m3 = street.match(/^(.*?),\s*([^,]+),\s*([A-Z]{2}),?\s+\d{5}\s*$/);
+    if (m3) { street = m3[1]; city = m3[2]; state = m3[3]; }
+    else {
+      // Old combined format: "street city, STATE zip"
+      const m2 = street.match(/^(.*),\s*([A-Z]{2}),?\s+\d{5}\s*$/);
+      if (m2) { street = m2[1]; state = m2[2]; }
+    }
   }
 
   document.getElementById('modal-title').textContent = `Appointment #${b.id.slice(0,8)}`;
