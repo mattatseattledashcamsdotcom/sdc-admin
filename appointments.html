@@ -181,11 +181,16 @@ window.openBooking = function(id) {
     if (slot) { startTime = startTime || slot.start_time; endTime = endTime || slot.end_time; }
   }
 
-  // Parse city/state out of service_address for older bookings that don't have them stored separately
+  // Split city/state out of service_address for display
   let street = b.service_address || '';
   let city = b.service_city || '';
   let state = b.service_state || '';
-  if ((!city || !state) && street) {
+  if (city && state && street) {
+    // Strip city and state from the end of the combined address so the street field shows just the street
+    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    street = street.replace(new RegExp(',?\\s*' + esc(city) + ',?\\s*' + esc(state) + '.*$', 'i'), '').trim().replace(/,\s*$/, '');
+  } else if ((!city || !state) && street) {
+    // Old format: try to parse state from "street city, STATE zip"
     const m = street.match(/^(.*),\s*([A-Z]{2})\s+\d{5}\s*$/);
     if (m) { street = m[1]; state = m[2]; }
   }
