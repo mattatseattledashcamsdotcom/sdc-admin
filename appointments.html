@@ -94,7 +94,16 @@ const STATUS_BADGE = {
 };
 
 let bookings = [];
+let slots = [];
 let currentId = null;
+
+async function loadSlots() {
+  try {
+    const res = await api('/admin/slots');
+    const data = await res.json();
+    slots = data.slots || [];
+  } catch {}
+}
 
 window.loadBookings = async function() {
   const status = document.getElementById('status-filter').value;
@@ -160,13 +169,34 @@ window.loadBookings = async function() {
 window.openBooking = function(id) {
   currentId = id;
   const b = bookings.find(x => x.id === id);
+
+  // Default pending bookings to confirmed in the modal
+  const defaultStatus = b.status === 'pending' ? 'confirmed' : b.status;
+
+  // Prefill times from slot if the booking doesn't have them stored
+  let startTime = b.appointment_time || '';
+  let endTime = b.appointment_end_time || '';
+  if ((!startTime || !endTime) && b.slot_id) {
+    const slot = slots.find(s => s.id === b.slot_id);
+    if (slot) { startTime = startTime || slot.start_time; endTime = endTime || slot.end_time; }
+  }
+
+  // Parse city/state out of service_address for older bookings that don't have them stored separately
+  let street = b.service_address || '';
+  let city = b.service_city || '';
+  let state = b.service_state || '';
+  if ((!city || !state) && street) {
+    const m = street.match(/^(.*),\s*([A-Z]{2})\s+\d{5}\s*$/);
+    if (m) { street = m[1]; state = m[2]; }
+  }
+
   document.getElementById('modal-title').textContent = `Appointment #${b.id.slice(0,8)}`;
   document.getElementById('modal-body').innerHTML = `
     <div class="form-row" style="margin-bottom:16px">
       <div class="form-group" style="margin-bottom:0"><label>Status</label>
         <select id="edit-status" onchange="document.getElementById('save-btn').disabled=false">
           ${['pending','confirmed','rejected','cancelled','no_show'].map(s =>
-            `<option value="${s}" ${b.status===s?'selected':''}>${s}</option>`).join('')}
+            `<option value="${s}" ${s===defaultStatus?'selected':''}>${s}</option>`).join('')}
         </select>
       </div>
       <div class="form-group" style="margin-bottom:0"><label>Appointment Date</label>
@@ -191,22 +221,22 @@ window.openBooking = function(id) {
     </div>
     <div class="form-row" style="margin-bottom:16px">
       <div class="form-group" style="margin-bottom:0"><label>Start Time</label>
-        <input type="time" id="edit-time" value="${b.appointment_time || ''}">
+        <input type="time" step="1800" id="edit-time" value="${startTime}">
       </div>
       <div class="form-group" style="margin-bottom:0"><label>End Time</label>
-        <input type="time" id="edit-end-time" value="${b.appointment_end_time || ''}">
+        <input type="time" step="1800" id="edit-end-time" value="${endTime}">
       </div>
     </div>
     <div class="form-group" style="position:relative"><label>Street Address</label>
-      <input type="text" id="edit-address" value="${b.service_address || ''}" autocomplete="off" oninput="addrSuggest('edit-address','edit-addr-drop')">
+      <input type="text" id="edit-address" value="${street}" autocomplete="off" oninput="addrSuggest('edit-address','edit-addr-drop')">
       <div id="edit-addr-drop" class="addr-drop"></div>
     </div>
     <div class="form-row" style="margin-bottom:16px">
       <div class="form-group" style="margin-bottom:0"><label>City</label>
-        <input type="text" id="edit-city" value="${b.service_city || ''}">
+        <input type="text" id="edit-city" value="${city}">
       </div>
       <div class="form-group" style="margin-bottom:0"><label>State</label>
-        <input type="text" id="edit-state" value="${b.service_state || ''}" style="max-width:80px">
+        <input type="text" id="edit-state" value="${state}" style="max-width:80px">
       </div>
     </div>
     <div class="form-group" style="margin-bottom:0"><label>Notes</label>
@@ -222,11 +252,14 @@ window.openBooking = function(id) {
 };
 
 window.saveBooking = async function() {
+  const street = document.getElementById('edit-address').value.trim();
   const city = document.getElementById('edit-city').value.trim();
   const state = document.getElementById('edit-state').value.trim();
-  const street = document.getElementById('edit-address').value.trim();
   const zip = document.getElementById('edit-zip').value.trim();
-  const fullAddress = [street, city && state ? `${city}, ${state}` : city || state, zip].filter(Boolean).join(' ');
+  // Build combined service_address only when city/state are filled; otherwise use street as-is
+  const fullAddress = (city || state)
+    ? [street, city && state ? `${city}, ${state}` : city || state].filter(Boolean).join(' ')
+    : street;
   const res = await api(`/admin/bookings/${currentId}`, {
     method: 'PATCH',
     body: JSON.stringify({
@@ -235,6 +268,8 @@ window.saveBooking = async function() {
       customer_email: document.getElementById('edit-email').value,
       customer_phone: document.getElementById('edit-phone').value,
       service_address: fullAddress,
+      service_city: city || null,
+      service_state: state || null,
       zip,
       appointment_date: document.getElementById('edit-date').value,
       appointment_time: document.getElementById('edit-time').value,
@@ -276,8 +311,8 @@ window.openNew = function() {
     </div>
     <div class="form-row" style="margin-bottom:16px">
       <div class="form-group" style="margin-bottom:0"><label>Appointment Date *</label><input type="date" id="edit-date"></div>
-      <div class="form-group" style="margin-bottom:0"><label>Start Time *</label><input type="time" id="edit-time"></div>
-      <div class="form-group" style="margin-bottom:0"><label>End Time</label><input type="time" id="edit-end-time"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Start Time *</label><input type="time" step="1800" id="edit-time"></div>
+      <div class="form-group" style="margin-bottom:0"><label>End Time</label><input type="time" step="1800" id="edit-end-time"></div>
     </div>
     <div class="form-group"><label>Products / What's being installed</label><input type="text" id="edit-products" placeholder="VIOFO A229 Pro 2-Channel, 128GB SD card"></div>
     <div class="form-group"><label>Notes</label><textarea id="edit-notes" placeholder="Gate code, parking instructions, etc."></textarea></div>
@@ -298,7 +333,9 @@ window.createBooking = async function() {
   const city = document.getElementById('edit-city').value.trim();
   const state = document.getElementById('edit-state').value.trim();
   const zip = document.getElementById('edit-zip').value.trim();
-  const fullAddress = [street, city && state ? `${city}, ${state}` : city || state, zip].filter(Boolean).join(' ');
+  const fullAddress = (city || state)
+    ? [street, city && state ? `${city}, ${state}` : city || state].filter(Boolean).join(' ')
+    : street;
   if (!name || !phone || !date || !time || !street) {
     toast('Name, phone, address, date and time are required', true); return;
   }
@@ -309,6 +346,8 @@ window.createBooking = async function() {
       customer_email: document.getElementById('edit-email').value.trim(),
       customer_phone: phone,
       service_address: fullAddress,
+      service_city: city || null,
+      service_state: state || null,
       appointment_date: date,
       appointment_time: time,
       appointment_end_time: document.getElementById('edit-end-time').value,
@@ -400,6 +439,7 @@ window.toast = function(msg, err=false) {
   setTimeout(() => el.remove(), 2800);
 };
 
+loadSlots();
 loadBookings();
 </script>
 </body>

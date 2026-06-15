@@ -64,7 +64,12 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
     }
+    .slot-row:hover { border-color: #388bfd; background: #1c2333; }
+    .slot-row.full { cursor: default; opacity: 0.5; }
+    .slot-row.full:hover { border-color: #21262d; background: #161b22; }
     .slot-time { font-size: 0.92rem; font-weight: 700; color: #f8fafc; }
     .slot-cap {
       font-size: 0.75rem;
@@ -75,6 +80,11 @@
     .slot-cap.open { background: #0d4a1e; color: #3fb950; }
     .slot-cap.full { background: #3d1f1f; color: #f85149; }
     .empty-state { color: #484f58; font-size: 0.88rem; padding: 20px 0; }
+    .addr-drop{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d0d7de;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:100;max-height:220px;overflow-y:auto}
+    .addr-item{padding:8px 12px;font-size:0.82rem;color:#1a1a1a;cursor:pointer;border-bottom:1px solid #f0f0f0;line-height:1.4}
+    .addr-item:last-child{border-bottom:none}
+    .addr-item:hover{background:#f0f6ff;color:#0969da}
+    .addr-loading{padding:8px 12px;font-size:0.82rem;color:#666;font-style:italic}
   </style>
 </head>
 <body>
@@ -97,9 +107,20 @@
   </div>
 </div>
 
+<div class="modal-backdrop hidden" id="book-modal">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="book-modal-title">New Booking</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeBookModal()">✕</button>
+    </div>
+    <div class="modal-body" id="book-modal-body"></div>
+    <div class="modal-footer" id="book-modal-footer"></div>
+  </div>
+</div>
+
 <script type="module">
 import { requireAuth, renderShell } from './shell.js';
-import { WORKER_URL } from './config.js';
+import { WORKER_URL, api } from './config.js';
 
 requireAuth();
 renderShell({ active: 'zip-lookup' });
@@ -159,7 +180,8 @@ window.lookup = async function() {
       const rows = daySlots.map(s => {
         const time = `${fmtTime(s.start_time)} – ${fmtTime(s.end_time)}`;
         const open = s.remaining > 0;
-        return `<div class="slot-row">
+        const slotData = encodeURIComponent(JSON.stringify({ date, zip, slot_id: s.slot_id, start_time: s.start_time, end_time: s.end_time, label: `${DAYS[dow]}, ${MONTHS[m-1]} ${d} · ${time}` }));
+        return `<div class="slot-row${open ? '' : ' full'}" ${open ? `onclick="openBookModal('${slotData}')"` : ''}>
           <div class="slot-time">${time}</div>
           <div class="slot-cap ${open ? 'open' : 'full'}">${open ? `${s.remaining} open` : 'Booked'}</div>
         </div>`;
@@ -171,6 +193,134 @@ window.lookup = async function() {
     status.textContent = 'Error checking availability — try again';
     status.className = 'bad';
   }
+};
+
+window.openBookModal = function(encoded) {
+  const s = JSON.parse(decodeURIComponent(encoded));
+  document.getElementById('book-modal-title').textContent = `New Booking — ${s.label}`;
+  document.getElementById('book-modal-body').innerHTML = `
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>Customer Name *</label><input type="text" id="bk-name" placeholder="John Smith"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Phone *</label><input type="text" id="bk-phone" placeholder="(206) 555-1234"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>Email</label><input type="email" id="bk-email" placeholder="john@email.com"></div>
+      <div class="form-group" style="margin-bottom:0"><label>ZIP</label><input type="text" id="bk-zip" value="${s.zip}"></div>
+    </div>
+    <div class="form-group" style="position:relative"><label>Street Address *</label>
+      <input type="text" id="bk-address" placeholder="123 Main St" autocomplete="off" oninput="addrSuggest('bk-address','bk-addr-drop')">
+      <div id="bk-addr-drop" class="addr-drop"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0"><label>City</label><input type="text" id="bk-city" placeholder="Kent"></div>
+      <div class="form-group" style="margin-bottom:0"><label>State</label><input type="text" id="bk-state" placeholder="WA" style="max-width:80px"></div>
+    </div>
+    <div class="form-group"><label>Products / What's being installed</label><input type="text" id="bk-products" placeholder="VIOFO A229 Pro 2-Channel, 128GB SD card"></div>
+    <div class="form-group"><label>Notes</label><textarea id="bk-notes" placeholder="Gate code, parking instructions, etc."></textarea></div>
+    <input type="hidden" id="bk-date" value="${s.date}">
+    <input type="hidden" id="bk-start" value="${s.start_time}">
+    <input type="hidden" id="bk-end" value="${s.end_time}">
+    <input type="hidden" id="bk-slot-id" value="${s.slot_id || ''}">
+  `;
+  document.getElementById('book-modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeBookModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="submitBooking()">Create Booking</button>
+  `;
+  document.getElementById('book-modal').classList.remove('hidden');
+  document.getElementById('bk-name').focus();
+};
+
+window.closeBookModal = function() {
+  document.getElementById('book-modal').classList.add('hidden');
+};
+
+document.getElementById('book-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('book-modal')) closeBookModal();
+});
+
+window.submitBooking = async function() {
+  const name = document.getElementById('bk-name').value.trim();
+  const phone = document.getElementById('bk-phone').value.trim();
+  const street = document.getElementById('bk-address').value.trim();
+  const city = document.getElementById('bk-city').value.trim();
+  const state = document.getElementById('bk-state').value.trim();
+  const zip = document.getElementById('bk-zip').value.trim();
+  if (!name || !phone || !street) {
+    toast('Name, phone, and address are required', true); return;
+  }
+  const fullAddress = (city || state)
+    ? [street, city && state ? `${city}, ${state}` : city || state].filter(Boolean).join(' ')
+    : street;
+  const res = await api('/admin/bookings', {
+    method: 'POST',
+    body: JSON.stringify({
+      customer_name: name,
+      customer_email: document.getElementById('bk-email').value.trim(),
+      customer_phone: phone,
+      service_address: fullAddress,
+      service_city: city || null,
+      service_state: state || null,
+      zip,
+      appointment_date: document.getElementById('bk-date').value,
+      appointment_time: document.getElementById('bk-start').value,
+      appointment_end_time: document.getElementById('bk-end').value,
+      slot_id: document.getElementById('bk-slot-id').value || null,
+      products: document.getElementById('bk-products').value.trim(),
+      notes: document.getElementById('bk-notes').value.trim(),
+    }),
+  });
+  if (res.ok) {
+    toast('Booking created — calendar event added');
+    closeBookModal();
+    lookup(); // refresh the slot counts
+  } else {
+    toast('Error creating booking', true);
+  }
+};
+
+let addrTimer = null;
+window.addrSuggest = function(inputId, dropId) {
+  clearTimeout(addrTimer);
+  const q = document.getElementById(inputId).value.trim();
+  const drop = document.getElementById(dropId);
+  if (q.length < 5) { drop.innerHTML = ''; drop.style.display = 'none'; return; }
+  drop.innerHTML = '<div class="addr-loading">Looking up address…</div>';
+  drop.style.display = 'block';
+  addrTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5&countrycodes=us`, { headers: { 'Accept-Language': 'en-US', 'User-Agent': 'SDC-Admin/1.0' } });
+      const results = await res.json();
+      if (!results.length) { drop.innerHTML = ''; drop.style.display = 'none'; return; }
+      drop.innerHTML = results.map((r, i) => `<div class="addr-item" data-i="${i}">${r.display_name}</div>`).join('');
+      drop.style.display = 'block';
+      drop.querySelectorAll('.addr-item').forEach((el, i) => {
+        el.addEventListener('mousedown', e => {
+          e.preventDefault();
+          const a = results[i].address;
+          const street = [a.house_number, a.road].filter(Boolean).join(' ');
+          const city = a.city || a.town || a.village || a.county || '';
+          const state = a.state || '';
+          const zip = a.postcode || '';
+          document.getElementById(inputId).value = street;
+          const cityEl = document.getElementById(inputId.replace('address','city'));
+          const stateEl = document.getElementById(inputId.replace('address','state'));
+          const zipEl = document.getElementById(inputId.replace('address','zip'));
+          if (cityEl) cityEl.value = city;
+          if (stateEl) stateEl.value = state;
+          if (zipEl && zip) zipEl.value = zip;
+          drop.innerHTML = ''; drop.style.display = 'none';
+        });
+      });
+    } catch(e) { drop.innerHTML = ''; drop.style.display = 'none'; }
+  }, 350);
+};
+
+window.toast = function(msg, err=false) {
+  const el = document.createElement('div');
+  el.className = `toast ${err ? 'toast-error' : 'toast-success'}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
 };
 </script>
 </body>
