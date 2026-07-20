@@ -483,21 +483,12 @@ function renderInstall() {
         </div>
       </div>
       <div style="border-top:1px solid #21262d;margin:16px 0;padding-top:16px">
-        <div style="font-size:0.78rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:14px">Vehicle Surcharges</div>
+        <div style="font-size:0.78rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Vehicle Surcharges</div>
+        <div style="font-size:0.78rem;color:#8b949e;margin-bottom:14px">Surcharge <strong>amounts</strong> come from the install product's "Vehicle Type" variant prices in Shopify (European/Exotic minus Standard) — edit them there. Only the labels below are used, shown in the quiz price breakdown.</div>
         <div class="frow-row">
-          <div class="frow">
-            <label>European — Shopify Handle</label>
-            <input value="${escHtml(CFG.surcharges?.european?.handle||'')}" oninput="setSurcharge('european','handle',this.value)">
-          </div>
           <div class="frow">
             <label>European — Label</label>
             <input value="${escHtml(CFG.surcharges?.european?.label||'')}" oninput="setSurcharge('european','label',this.value)">
-          </div>
-        </div>
-        <div class="frow-row">
-          <div class="frow">
-            <label>Exotic — Shopify Handle</label>
-            <input value="${escHtml(CFG.surcharges?.exotic?.handle||'')}" oninput="setSurcharge('exotic','handle',this.value)">
           </div>
           <div class="frow">
             <label>Exotic — Label</label>
