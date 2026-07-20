@@ -26,6 +26,8 @@
       <div class="topbar-sub" id="subtitle">Loading…</div>
     </div>
     <div class="topbar-right">
+      <input type="search" id="search-box" placeholder="Search name, phone, or email…" autocomplete="off"
+        oninput="searchInput()" style="width:220px;max-width:42vw;font-size:0.8rem;padding:6px 10px">
       <select id="status-filter" onchange="loadBookings()" style="width:auto;font-size:0.8rem;padding:6px 10px">
         <option value="">All</option>
         <option value="pending" selected>Pending</option>
@@ -94,8 +96,15 @@ const STATUS_BADGE = {
 };
 
 let bookings = [];
+let allBookings = null; // cache of every booking (all statuses) for search
 let slots = [];
 let currentId = null;
+let searchTimer = null;
+
+window.searchInput = function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadBookings, 250);
+};
 
 async function loadSlots() {
   try {
@@ -106,12 +115,29 @@ async function loadSlots() {
 }
 
 window.loadBookings = async function() {
-  const status = document.getElementById('status-filter').value;
-  const path = status ? `/admin/bookings?status=${status}` : '/admin/bookings';
-  const res = await api(path);
-  bookings = await res.json();
+  const q = document.getElementById('search-box').value.trim().toLowerCase();
 
-  document.getElementById('subtitle').textContent = `${bookings.length} appointment${bookings.length !== 1 ? 's' : ''}`;
+  if (q) {
+    // Search spans ALL statuses — the status dropdown is ignored while a query is active
+    if (!allBookings) {
+      const res = await api('/admin/bookings');
+      allBookings = await res.json();
+    }
+    const qDigits = q.replace(/\D/g, '');
+    bookings = allBookings.filter(b =>
+      (b.customer_name || '').toLowerCase().includes(q) ||
+      (b.customer_email || '').toLowerCase().includes(q) ||
+      (qDigits.length >= 3 && (b.customer_phone || '').replace(/\D/g, '').includes(qDigits))
+    );
+    document.getElementById('subtitle').textContent =
+      `${bookings.length} match${bookings.length !== 1 ? 'es' : ''} · searching all statuses`;
+  } else {
+    const status = document.getElementById('status-filter').value;
+    const path = status ? `/admin/bookings?status=${status}` : '/admin/bookings';
+    const res = await api(path);
+    bookings = await res.json();
+    document.getElementById('subtitle').textContent = `${bookings.length} appointment${bookings.length !== 1 ? 's' : ''}`;
+  }
 
   if (!bookings.length) {
     document.getElementById('table-wrap').innerHTML = `<div class="empty"><div class="empty-title">No appointments</div></div>`;
@@ -288,7 +314,7 @@ window.saveBooking = async function() {
       notes: document.getElementById('edit-notes').value,
     }),
   });
-  if (res.ok) { toast('Saved'); closeModal(); loadBookings(); }
+  if (res.ok) { toast('Saved'); closeModal(); allBookings = null; loadBookings(); }
   else toast('Error saving', true);
 };
 
@@ -296,7 +322,7 @@ window.updateStatus = async function(id, status) {
   if (status === 'confirmed' && !confirm('Approve this booking? This will send a confirmation email and create a calendar event.')) return;
   if (status === 'rejected' && !confirm('Reject this booking? This will email the customer.')) return;
   const res = await api(`/admin/bookings/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
-  if (res.ok) { toast(`Booking ${status}`); loadBookings(); }
+  if (res.ok) { toast(`Booking ${status}`); allBookings = null; loadBookings(); }
   else toast('Error', true);
 };
 
@@ -367,7 +393,7 @@ window.createBooking = async function() {
       notes: document.getElementById('edit-notes').value.trim(),
     }),
   });
-  if (res.ok) { toast('Booking created — calendar event added'); closeModal(); loadBookings(); }
+  if (res.ok) { toast('Booking created — calendar event added'); closeModal(); allBookings = null; loadBookings(); }
   else toast('Error creating booking', true);
 };
 
@@ -377,6 +403,7 @@ window.syncLegacy = async function() {
   const data = await res.json();
   if (res.ok) {
     toast(`Imported ${data.inserted} bookings (${data.skipped} skipped)`);
+    allBookings = null;
     loadBookings();
   } else {
     toast(`Sync failed: ${data.error || res.status}`, true);
