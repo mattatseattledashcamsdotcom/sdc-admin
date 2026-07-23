@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
   <title>Product Configurator — SDC Admin</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
@@ -11,21 +11,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SDC Admin">
   <style>
-    .group-card{background:#161b22;border:1px solid #21262d;border-radius:12px;margin-bottom:12px;overflow:hidden;cursor:pointer;transition:all 0.15s}
-    .group-card:hover{border-color:#388bfd;background:#1c2128}
-    .group-card-hdr{padding:16px 20px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between}
+    .group-card{background:#171c30;border:1px solid #232946;border-radius:12px;margin-bottom:12px;overflow:hidden;cursor:pointer;transition:all 0.15s}
+    .group-card:hover{border-color:#388bfd;background:#1e2338}
+    .group-card-hdr{padding:16px 20px;border-bottom:1px solid #232946;display:flex;align-items:center;justify-content:space-between}
     .group-name{font-size:0.92rem;font-weight:700}
-    .camera-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:#0d1117;border:1px solid #30363d;border-radius:6px;font-size:0.7rem;color:#8b949e;margin:2px}
-    .acc-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #21262d}
+    .camera-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:#0f1222;border:1px solid #2e365a;border-radius:6px;font-size:0.7rem;color:#8b949e;margin:2px}
+    .acc-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #232946}
     .acc-row:last-child{border-bottom:none}
     .drag-handle{color:#484f58;cursor:grab;font-size:0.9rem;flex-shrink:0;margin-top:2px}
-    .channel-pill{padding:7px 16px;border-radius:8px;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid #30363d;background:#0d1117;color:#8b949e;transition:all 0.15s}
-    .channel-pill.active{border-color:#3fb950;background:#0d4a1e;color:#3fb950}
-    .tag-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#21262d;border:1px solid #30363d;border-radius:5px;font-size:0.7rem;color:#8b949e;margin:2px}
+    .channel-pill{padding:7px 16px;border-radius:8px;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid #2e365a;background:#0f1222;color:#8b949e;transition:all 0.15s}
+    .channel-pill.active{border-color:#5d78e6;background:#1b2347;color:#7d94f5}
+    .tag-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#232946;border:1px solid #2e365a;border-radius:5px;font-size:0.7rem;color:#8b949e;margin:2px}
     .tag-pill button{background:none;border:none;color:#484f58;cursor:pointer;padding:0;line-height:1;font-size:0.9rem}
     .tag-pill button:hover{color:#f85149}
-    .upsell-block{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:14px;margin-bottom:10px}
-    .sw-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #21262d}
+    .upsell-block{background:#0f1222;border:1px solid #232946;border-radius:10px;padding:14px;margin-bottom:10px}
+    .sw-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #232946}
     .sw-row:last-child{border-bottom:none}
   </style>
 </head>
@@ -102,13 +102,13 @@
             <div class="channel-pill" onclick="setChannel('3',this)">3-Channel</div>
             <div class="channel-pill" onclick="setChannel('selector',this)">Channel Selector<br><small style="font-size:0.62rem;font-weight:400;opacity:0.7">BYO flow only</small></div>
           </div>
-          <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px">
+          <div style="background:#0f1222;border:1px solid #232946;border-radius:8px;padding:10px 14px">
             <div style="display:flex;align-items:center;gap:10px">
               <div style="font-size:0.76rem;color:#484f58;white-space:nowrap">Links to non-inv SKU →</div>
               <input type="text" id="gm-install-sku" placeholder="gid://shopify/Product/..." style="flex:1" oninput="resolveInstallSku()">
               <div style="font-size:0.7rem;color:#484f58;white-space:nowrap">auto-added to cart</div>
             </div>
-            <div id="gm-install-sku-name" style="font-size:0.75rem;font-weight:600;color:#3fb950;margin-top:6px;display:none"></div>
+            <div id="gm-install-sku-name" style="font-size:0.75rem;font-weight:600;color:#7d94f5;margin-top:6px;display:none"></div>
           </div>
         </div>
         <div class="form-group">
@@ -139,7 +139,7 @@
 
       <!-- Tab 2: Required Accessories -->
       <div class="step-panel" id="gm-tab-1">
-        <div style="display:flex;align-items:center;justify-content:space-between;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#0f1222;border:1px solid #232946;border-radius:8px;padding:10px 14px;margin-bottom:14px">
           <div><div style="font-size:0.82rem;font-weight:600">Block starts expanded on PDP</div><div style="font-size:0.7rem;color:#484f58">Collapsed by default if off</div></div>
           <label class="sw"><input type="checkbox" id="gm-req-expanded" checked><span class="sw-track"></span></label>
         </div>
@@ -163,7 +163,7 @@
       <div class="step-panel" id="gm-tab-4">
         <div class="form-group">
           <label>Block Visibility on PDP</label>
-          <div style="background:#0d1117;border:1px solid #21262d;border-radius:10px;overflow:hidden">
+          <div style="background:#0f1222;border:1px solid #232946;border-radius:10px;overflow:hidden">
             <div class="sw-row"><div><div style="font-size:0.82rem">Required Accessories block visible</div></div><label class="sw"><input type="checkbox" id="gm-req-vis" checked><span class="sw-track"></span></label></div>
             <div class="sw-row"><div><div style="font-size:0.82rem">Optional Accessories block visible</div></div><label class="sw"><input type="checkbox" id="gm-opt-vis" checked><span class="sw-track"></span></label></div>
             <div class="sw-row"><div><div style="font-size:0.82rem">Upsells block visible</div></div><label class="sw"><input type="checkbox" id="gm-upsell-vis" checked><span class="sw-track"></span></label></div>
@@ -332,26 +332,26 @@ function renderAccList(type, items) {
 
 function reqSectionHtml(label, products, flags) {
   const f = flags || {};
-  return `<div class="req-section-block" style="border:1px solid #21262d;border-radius:8px;margin-bottom:12px;overflow:hidden">
-    <div style="background:#0d1117;padding:10px 14px;display:flex;align-items:center;gap:10px">
+  return `<div class="req-section-block" style="border:1px solid #232946;border-radius:8px;margin-bottom:12px;overflow:hidden">
+    <div style="background:#0f1222;padding:10px 14px;display:flex;align-items:center;gap:10px">
       <span class="drag-handle" style="cursor:grab;color:#484f58;font-size:1.1rem">⠿</span>
       <div style="flex:1">
         <label style="font-size:0.7rem;font-weight:600;color:#8b949e;display:block;margin-bottom:3px">Section Name</label>
-        <input type="text" class="req-section-name" value="${label !== 'Required' ? label : ''}" placeholder="e.g. Hardwire Kit, SD Card" style="background:#161b22;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
+        <input type="text" class="req-section-name" value="${label !== 'Required' ? label : ''}" placeholder="e.g. Hardwire Kit, SD Card" style="background:#171c30;border:1px solid #2e365a;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
       </div>
       <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('.req-section-block').remove()" style="flex-shrink:0">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#f85149" stroke-width="2"><path d="M3 3l10 10M13 3L3 13"/></svg>
       </button>
     </div>
-    <div style="padding:10px 14px;background:#0d1117;border-top:1px solid #21262d;display:flex;gap:16px;flex-wrap:wrap">
+    <div style="padding:10px 14px;background:#0f1222;border-top:1px solid #232946;display:flex;gap:16px;flex-wrap:wrap">
       <label class="sw"><input type="checkbox" class="sec-force-select" ${f.force_select?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">Force selection (no auto-select, blocks booking)</span></label>
       <label class="sw"><input type="checkbox" class="sec-byo-default" ${f.byo_default?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO pre-selected by default</span></label>
       <label class="sw"><input type="checkbox" class="sec-byo-only" ${f.byo_only?'checked':''}><span class="sw-track"></span><span style="font-size:0.72rem;margin-left:7px;color:#8b949e">BYO only (hide product rows, customer confirms they have one)</span></label>
     </div>
-    <div class="req-section-products" style="padding:10px 14px;border-top:1px solid #21262d;display:flex;flex-direction:column;gap:8px">
+    <div class="req-section-products" style="padding:10px 14px;border-top:1px solid #232946;display:flex;flex-direction:column;gap:8px">
       ${products.map(a => reqProductRowHtml(a)).join('')}
     </div>
-    <div style="padding:8px 14px;border-top:1px solid #21262d">
+    <div style="padding:8px 14px;border-top:1px solid #232946">
       <button class="btn btn-ghost btn-sm" onclick="addProductToSection(this)">+ Add product to section</button>
     </div>
   </div>`;
@@ -367,10 +367,10 @@ function parseNote(raw) {
 function reqProductRowHtml(a) {
   const title = a.shopify_product_id && productTitleCache[a.shopify_product_id] ? productTitleCache[a.shopify_product_id] : '';
   const n = parseNote(a.note);
-  return `<div class="acc-row req-product-row" style="background:#161b22;border:1px solid #21262d;border-radius:6px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px">
+  return `<div class="acc-row req-product-row" style="background:#171c30;border:1px solid #232946;border-radius:6px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px">
     <span class="drag-handle" style="cursor:grab;color:#484f58;padding-top:2px">⠿</span>
     <div style="flex:1;min-width:0">
-      ${title ? `<div style="font-size:0.75rem;font-weight:600;color:#3fb950;margin-bottom:6px">${title}</div>` : ''}
+      ${title ? `<div style="font-size:0.75rem;font-weight:600;color:#7d94f5;margin-bottom:6px">${title}</div>` : ''}
       <div class="form-row" style="margin-bottom:6px">
         <div class="form-group" style="margin-bottom:0"><label>Shopify Product ID</label>
           <input type="text" class="acc-pid" value="${a.shopify_product_id||''}" placeholder="gid://shopify/Product/…">
@@ -394,7 +394,7 @@ function reqProductRowHtml(a) {
       </div>
       <div style="margin-bottom:0">
         <div class="form-group" style="margin-bottom:0"><label>Brand Filter <span style="font-weight:400;color:#484f58">(BYO only — show for this brand)</span></label>
-          <select class="acc-brand-filter" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
+          <select class="acc-brand-filter" style="background:#0f1222;border:1px solid #2e365a;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
             <option value="">All brands (always show)</option>
             <option${a.brand_filter==='VIOFO'?' selected':''}>VIOFO</option>
             <option${a.brand_filter==='Vueroid'?' selected':''}>Vueroid</option>
@@ -419,7 +419,7 @@ function accRowHtml(type, a, i) {
     <div style="flex:1">
       <div class="form-row" style="margin-bottom:6px">
         <div class="form-group" style="margin-bottom:0"><label>Shopify Product ID</label>
-          ${a.shopify_product_id && productTitleCache[a.shopify_product_id] ? `<div style="font-size:0.75rem;font-weight:600;color:#3fb950;margin-bottom:4px">${productTitleCache[a.shopify_product_id]}</div>` : ''}
+          ${a.shopify_product_id && productTitleCache[a.shopify_product_id] ? `<div style="font-size:0.75rem;font-weight:600;color:#7d94f5;margin-bottom:4px">${productTitleCache[a.shopify_product_id]}</div>` : ''}
           <input type="text" class="acc-pid" value="${a.shopify_product_id||''}" placeholder="gid://shopify/Product/…">
         </div>
         <div class="form-group" style="margin-bottom:0"><label>Default Variant ID</label>
@@ -433,7 +433,7 @@ function accRowHtml(type, a, i) {
       </div>
       <div class="form-row" style="margin-bottom:6px">
         <div class="form-group" style="margin-bottom:0"><label>Brand Filter</label>
-          <select class="acc-brand-filter" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
+          <select class="acc-brand-filter" style="background:#0f1222;border:1px solid #2e365a;border-radius:6px;color:#e6edf3;font-size:0.82rem;padding:5px 10px;width:100%;outline:none">
             <option value="">All brands (always show)</option>
             <option${a.brand_filter==='VIOFO'?' selected':''}>VIOFO</option>
             <option${a.brand_filter==='Vueroid'?' selected':''}>Vueroid</option>
@@ -593,7 +593,7 @@ async function loadAssignments() {
   const groupCounts = {};
   assignments.forEach(a => { groupCounts[a.group_id] = (groupCounts[a.group_id]||0)+1; });
   document.getElementById('groups-summary').innerHTML = groups.map(g => `
-    <div style="padding:10px 16px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between">
+    <div style="padding:10px 16px;border-bottom:1px solid #232946;display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:0.82rem;font-weight:600">${g.name}</div>
       <span class="badge badge-blue">${groupCounts[g.id]||0} cameras</span>
     </div>`).join('');

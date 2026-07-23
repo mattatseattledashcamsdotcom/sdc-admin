@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
   <title>Schedule Editor — SDC Admin</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
@@ -11,21 +11,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SDC Admin">
   <style>
-    .slot-card{background:#161b22;border:1px solid #21262d;border-radius:12px;margin-bottom:12px;overflow:hidden}
-    .slot-card-hdr{padding:14px 20px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
-    .slot-card-hdr:hover{background:#1c2128}
+    .slot-card{background:#171c30;border:1px solid #232946;border-radius:12px;margin-bottom:12px;overflow:hidden}
+    .slot-card-hdr{padding:14px 20px;border-bottom:1px solid #232946;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+    .slot-card-hdr:hover{background:#1e2338}
     .slot-card-title{font-size:0.88rem;font-weight:700;display:flex;align-items:center;gap:10px}
     .slot-body{display:none;padding:20px}
     .slot-body.open{display:block}
     .chevron{font-size:0.7rem;color:#484f58;transition:transform 0.2s;margin-left:4px}
     .chevron.open{transform:rotate(180deg)}
-    .pattern-row{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:14px;margin-bottom:8px}
-    .pattern-label{font-size:0.78rem;font-weight:700;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:3px 10px;min-width:60px;text-align:center;display:inline-block}
-    .zip-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#161b22;border:1px solid #30363d;border-radius:5px;font-size:0.72rem;color:#8b949e;margin:2px}
+    .pattern-row{background:#0f1222;border:1px solid #232946;border-radius:8px;padding:14px;margin-bottom:8px}
+    .pattern-label{font-size:0.78rem;font-weight:700;background:#232946;border:1px solid #2e365a;border-radius:6px;padding:3px 10px;min-width:60px;text-align:center;display:inline-block}
+    .zip-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#171c30;border:1px solid #2e365a;border-radius:5px;font-size:0.72rem;color:#8b949e;margin:2px}
     .zip-tag button{background:none;border:none;color:#484f58;cursor:pointer;font-size:0.8rem;line-height:1}
     .zip-tag button:hover{color:#f85149}
-    .day-pill{padding:5px 10px;border-radius:6px;font-size:0.74rem;font-weight:700;cursor:pointer;border:1.5px solid #30363d;background:#0d1117;color:#484f58;transition:all 0.15s}
-    .day-pill.on{border-color:#3fb950;background:#0d4a1e;color:#3fb950}
+    .day-pill{padding:5px 10px;border-radius:6px;font-size:0.74rem;font-weight:700;cursor:pointer;border:1.5px solid #2e365a;background:#0f1222;color:#484f58;transition:all 0.15s}
+    .day-pill.on{border-color:#5d78e6;background:#1b2347;color:#7d94f5}
   </style>
 </head>
 <body>
@@ -366,7 +366,7 @@ async function loadBlocks() {
     return;
   }
   document.getElementById('blocks-list').innerHTML = blocks.map(b => `
-    <div style="padding:12px 20px;border-bottom:1px solid #21262d;display:flex;align-items:center;justify-content:space-between">
+    <div style="padding:12px 20px;border-bottom:1px solid #232946;display:flex;align-items:center;justify-content:space-between">
       <div>
         <div style="font-size:0.82rem;font-weight:600">${b.start_date === b.end_date ? b.start_date : `${b.start_date} – ${b.end_date}`}</div>
         ${b.label ? `<div style="font-size:0.72rem;color:#8b949e">${b.label}</div>` : ''}
@@ -406,7 +406,7 @@ async function loadOverrides() {
     return;
   }
   document.getElementById('overrides-list').innerHTML = overrides.map(o => `
-    <div style="padding:14px 20px;border-bottom:1px solid #21262d;display:flex;gap:12px;align-items:flex-start">
+    <div style="padding:14px 20px;border-bottom:1px solid #232946;display:flex;gap:12px;align-items:flex-start">
       <div style="flex:1">
         <div style="font-size:0.82rem;font-weight:700;margin-bottom:4px">Week of ${o.week_of}</div>
         ${o.note ? `<div style="font-size:0.72rem;color:#8b949e;margin-bottom:6px">${o.note}</div>` : ''}

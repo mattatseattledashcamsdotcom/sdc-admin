@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
   <title>Appointments — SDC Admin</title>
   <link rel="stylesheet" href="style.css">
   <style>
@@ -20,14 +20,14 @@
 </head>
 <body>
 <div class="main">
-  <div class="topbar">
-    <div>
+  <div class="topbar has-search">
+    <div class="topbar-heading">
       <div class="topbar-title">Appointments</div>
       <div class="topbar-sub" id="subtitle">Loading…</div>
     </div>
+    <input type="search" id="search-box" class="topbar-search" placeholder="Search name, phone, or email…" autocomplete="off"
+      oninput="searchInput()">
     <div class="topbar-right">
-      <input type="search" id="search-box" placeholder="Search name, phone, or email…" autocomplete="off"
-        oninput="searchInput()" style="width:220px;max-width:42vw;font-size:0.8rem;padding:6px 10px">
       <select id="status-filter" onchange="loadBookings()" style="width:auto;font-size:0.8rem;padding:6px 10px">
         <option value="">All</option>
         <option value="pending" selected>Pending</option>

@@ -4,8 +4,8 @@
   "description": "Seattle Dash Cams booking admin",
   "start_url": "/sdc-admin/appointments.html",
   "display": "standalone",
-  "background_color": "#0d1117",
-  "theme_color": "#161b22",
+  "background_color": "#0f1222",
+  "theme_color": "#0f1222",
   "icons": [
     {
       "src": "https://cdn.shopify.com/s/files/1/0629/6456/4045/files/cropped-Seattle-Dash-Cams-JPG-2-2-192x192.jpg?v=1749206377",

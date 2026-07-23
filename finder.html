@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
   <title>Finder Config — SDC Admin</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
@@ -12,19 +12,19 @@
   <meta name="apple-mobile-web-app-title" content="SDC Admin">
   <style>
     /* ── Tabs ── */
-    .tabs{display:flex;gap:2px;border-bottom:1px solid #21262d;margin-bottom:24px}
+    .tabs{display:flex;gap:2px;border-bottom:1px solid #232946;margin-bottom:24px}
     .tab-btn{padding:9px 18px;font-size:0.82rem;font-weight:600;background:none;border:none;color:#8b949e;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
-    .tab-btn.active{color:#e6edf3;border-bottom-color:#3fb950}
+    .tab-btn.active{color:#e6edf3;border-bottom-color:#7d94f5}
     .tab-btn:hover:not(.active){color:#c9d1d9}
     .tab-pane{display:none}.tab-pane.active{display:block}
 
     /* ── Cards ── */
-    .cam-card{background:#161b22;border:1px solid #21262d;border-radius:12px;margin-bottom:10px;overflow:hidden}
+    .cam-card{background:#171c30;border:1px solid #232946;border-radius:12px;margin-bottom:10px;overflow:hidden}
     .cam-card-hdr{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;gap:10px}
-    .cam-card-hdr:hover{background:#1c2128}
+    .cam-card-hdr:hover{background:#1e2338}
     .cam-card-name{font-size:0.88rem;font-weight:700;color:#e6edf3;flex:1}
     .cam-card-meta{font-size:0.75rem;color:#484f58}
-    .cam-card-body{display:none;padding:18px;border-top:1px solid #21262d}
+    .cam-card-body{display:none;padding:18px;border-top:1px solid #232946}
     .cam-card-body.open{display:block}
     .chevron{font-size:0.65rem;color:#484f58;transition:transform .2s}
     .chevron.open{transform:rotate(180deg)}
@@ -32,42 +32,42 @@
     /* ── Form rows ── */
     .frow{margin-bottom:14px}
     .frow label{display:block;font-size:0.74rem;font-weight:600;color:#8b949e;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
-    .frow input,.frow select,.frow textarea{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:8px 12px;color:#e6edf3;font-size:0.85rem;font-family:inherit;outline:none;transition:border-color .15s}
-    .frow input:focus,.frow select:focus,.frow textarea:focus{border-color:#3fb950}
+    .frow input,.frow select,.frow textarea{width:100%;background:#0f1222;border:1px solid #2e365a;border-radius:8px;padding:8px 12px;color:#e6edf3;font-size:0.85rem;font-family:inherit;outline:none;transition:border-color .15s}
+    .frow input:focus,.frow select:focus,.frow textarea:focus{border-color:#5d78e6}
     .frow textarea{resize:vertical;min-height:72px;line-height:1.5}
-    .frow select option{background:#161b22}
+    .frow select option{background:#171c30}
     .frow-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     @media(max-width:600px){.frow-row{grid-template-columns:1fr}}
 
     /* ── Bullet list editor ── */
     .bullet-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
     .bullet-item{display:flex;align-items:center;gap:8px}
-    .bullet-item input{flex:1;background:#0d1117;border:1px solid #30363d;border-radius:7px;padding:7px 10px;color:#e6edf3;font-size:0.83rem;font-family:inherit;outline:none}
-    .bullet-item input:focus{border-color:#3fb950}
+    .bullet-item input{flex:1;background:#0f1222;border:1px solid #2e365a;border-radius:7px;padding:7px 10px;color:#e6edf3;font-size:0.83rem;font-family:inherit;outline:none}
+    .bullet-item input:focus{border-color:#5d78e6}
     .bullet-del{background:none;border:none;color:#484f58;cursor:pointer;font-size:1rem;line-height:1;padding:2px 4px}
     .bullet-del:hover{color:#f85149}
-    .add-bullet-btn{background:none;border:1px dashed #30363d;border-radius:7px;padding:6px 12px;color:#8b949e;font-size:0.78rem;cursor:pointer;width:100%;text-align:center;transition:border-color .15s,color .15s}
+    .add-bullet-btn{background:none;border:1px dashed #2e365a;border-radius:7px;padding:6px 12px;color:#8b949e;font-size:0.78rem;cursor:pointer;width:100%;text-align:center;transition:border-color .15s,color .15s}
     .add-bullet-btn:hover{border-color:#8b949e;color:#e6edf3}
 
     /* ── Accessory checkboxes ── */
     .acc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
-    .acc-chip{display:flex;align-items:center;gap:6px;padding:5px 10px;background:#0d1117;border:1px solid #30363d;border-radius:7px;cursor:pointer;font-size:0.78rem;color:#8b949e;transition:border-color .15s,color .15s,background .15s;user-select:none}
+    .acc-chip{display:flex;align-items:center;gap:6px;padding:5px 10px;background:#0f1222;border:1px solid #2e365a;border-radius:7px;cursor:pointer;font-size:0.78rem;color:#8b949e;transition:border-color .15s,color .15s,background .15s;user-select:none}
     .acc-chip input{display:none}
-    .acc-chip.checked{border-color:#3fb950;background:#0d4a1e;color:#3fb950}
+    .acc-chip.checked{border-color:#5d78e6;background:#1b2347;color:#7d94f5}
 
     /* ── Rules ── */
-    .rule-card{background:#161b22;border:1px solid #21262d;border-radius:10px;margin-bottom:8px;overflow:hidden}
+    .rule-card{background:#171c30;border:1px solid #232946;border-radius:10px;margin-bottom:8px;overflow:hidden}
     .rule-card-hdr{padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
-    .rule-card-hdr:hover{background:#1c2128}
+    .rule-card-hdr:hover{background:#1e2338}
     .rule-card-title{flex:1;font-size:0.82rem;font-weight:600;color:#e6edf3}
     .rule-card-meta{font-size:0.72rem;color:#484f58}
-    .rule-card-body{display:none;padding:16px;border-top:1px solid #21262d}
+    .rule-card-body{display:none;padding:16px;border-top:1px solid #232946}
     .rule-card-body.open{display:block}
     .cond-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
     @media(max-width:600px){.cond-grid{grid-template-columns:1fr 1fr}}
     .products-order{display:flex;flex-direction:column;gap:5px;margin-top:4px}
-    .prod-order-item{display:flex;align-items:center;gap:8px;background:#0d1117;border:1px solid #30363d;border-radius:7px;padding:7px 10px;font-size:0.82rem;color:#e6edf3}
-    .prod-order-item select{flex:1;background:#0d1117;border:none;color:#e6edf3;font-size:0.82rem;outline:none}
+    .prod-order-item{display:flex;align-items:center;gap:8px;background:#0f1222;border:1px solid #2e365a;border-radius:7px;padding:7px 10px;font-size:0.82rem;color:#e6edf3}
+    .prod-order-item select{flex:1;background:#0f1222;border:none;color:#e6edf3;font-size:0.82rem;outline:none}
     .prod-order-del{background:none;border:none;color:#484f58;cursor:pointer;font-size:0.9rem}
     .prod-order-del:hover{color:#f85149}
     .fallback-box{background:#1c1700;border:1px solid #3a2a00;border-radius:8px;padding:12px;margin-top:10px}
@@ -75,15 +75,15 @@
 
     /* ── Quiz Results ── */
     .qr-table{width:100%;border-collapse:collapse;font-size:0.8rem}
-    .qr-table th{text-align:left;padding:8px 10px;border-bottom:1px solid #21262d;color:#8b949e;font-weight:600;font-size:0.72rem;text-transform:uppercase;letter-spacing:.04em}
-    .qr-table td{padding:8px 10px;border-bottom:1px solid #161b22;color:#c9d1d9;vertical-align:top}
-    .qr-table tr:hover td{background:#161b22}
-    .tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:0.7rem;font-weight:600;background:#21262d;color:#8b949e;margin:1px}
+    .qr-table th{text-align:left;padding:8px 10px;border-bottom:1px solid #232946;color:#8b949e;font-weight:600;font-size:0.72rem;text-transform:uppercase;letter-spacing:.04em}
+    .qr-table td{padding:8px 10px;border-bottom:1px solid #171c30;color:#c9d1d9;vertical-align:top}
+    .qr-table tr:hover td{background:#171c30}
+    .tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:0.7rem;font-weight:600;background:#232946;color:#8b949e;margin:1px}
     .tag.cam{background:#0d3a6e;color:#79c0ff}
-    .tag.result{background:#0d4a1e;color:#3fb950}
+    .tag.result{background:#1b2347;color:#7d94f5}
 
     /* ── Save bar ── */
-    .save-bar{position:sticky;bottom:0;background:#0d1117;border-top:1px solid #21262d;padding:14px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px}
+    .save-bar{position:sticky;bottom:0;background:#0f1222;border-top:1px solid #232946;padding:14px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px}
     .save-status{font-size:0.8rem;color:#8b949e}
     .save-status.ok{color:#3fb950}
     .save-status.err{color:#f85149}
@@ -467,7 +467,7 @@ function renderInstall() {
         <label>3-Channel — Variant Index</label>
         <input type="number" min="0" value="${oc[3]?.variant ?? 2}" oninput="setInstallVariant(3,parseInt(this.value))">
       </div>
-      <div style="border-top:1px solid #21262d;margin:16px 0;padding-top:16px">
+      <div style="border-top:1px solid #232946;margin:16px 0;padding-top:16px">
         <div style="font-size:0.78rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:14px">BYO Booking URLs</div>
         <div class="frow">
           <label>1-Channel BYO Booking Page</label>
@@ -482,7 +482,7 @@ function renderInstall() {
           <input value="${escHtml(byoUrls[3]||'')}" oninput="setBYOUrl(3,this.value)" placeholder="/products/3-channel-installation-front-rear-and-interior-cameras">
         </div>
       </div>
-      <div style="border-top:1px solid #21262d;margin:16px 0;padding-top:16px">
+      <div style="border-top:1px solid #232946;margin:16px 0;padding-top:16px">
         <div style="font-size:0.78rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Vehicle Surcharges</div>
         <div style="font-size:0.78rem;color:#8b949e;margin-bottom:14px">Surcharge <strong>amounts</strong> come from the install product's "Vehicle Type" variant prices in Shopify (European/Exotic minus Standard) — edit them there. Only the labels below are used, shown in the quiz price breakdown.</div>
         <div class="frow-row">

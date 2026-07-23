@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Booking Links — SDC Admin</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
@@ -11,13 +11,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SDC Admin">
   <style>
-    .acc-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #21262d}
+    .acc-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #232946}
     .acc-row:last-child{border-bottom:none}
-    .acc-chk{width:18px;height:18px;border:2px solid #30363d;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;cursor:pointer;transition:all 0.15s;font-size:0.7rem;user-select:none}
-    .acc-chk.on{background:#238636;border-color:#2ea043;color:#fff}
-    .acc-chk.locked{background:#161b22;border-color:#21262d;color:#484f58;cursor:default}
-    .link-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px 14px;font-family:monospace;font-size:0.72rem;color:#3fb950;word-break:break-all;line-height:1.7;min-height:48px}
-    .history-row{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid #21262d;font-size:0.78rem}
+    .acc-chk{width:18px;height:18px;border:2px solid #2e365a;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;cursor:pointer;transition:all 0.15s;font-size:0.7rem;user-select:none}
+    .acc-chk.on{background:#334fb4;border-color:#4a63d8;color:#fff}
+    .acc-chk.locked{background:#171c30;border-color:#232946;color:#484f58;cursor:default}
+    .link-box{background:#0f1222;border:1px solid #2e365a;border-radius:8px;padding:12px 14px;font-family:monospace;font-size:0.72rem;color:#7d94f5;word-break:break-all;line-height:1.7;min-height:48px}
+    .history-row{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid #232946;font-size:0.78rem}
     .history-row:last-child{border-bottom:none}
   </style>
 </head>
@@ -138,7 +138,7 @@ function renderAccessories() {
 
   body.innerHTML = `
     ${req.length ? `
-      <div style="font-size:0.74rem;font-weight:700;color:#484f58;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Required <span style="font-weight:400;color:#21262d;margin-left:4px">— customer can BYO</span></div>
+      <div style="font-size:0.74rem;font-weight:700;color:#484f58;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Required <span style="font-weight:400;color:#232946;margin-left:4px">— customer can BYO</span></div>
       ${req.map(a => `
         <div class="acc-row">
           <div class="acc-chk locked">✓</div>
