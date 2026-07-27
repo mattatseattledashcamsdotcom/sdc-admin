@@ -42,8 +42,12 @@
     .cat-product-hdr { display: flex; align-items: center; gap: 10px; }
     .cat-img { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; background: #232946; flex-shrink: 0; }
     .cat-title { font-size: 0.84rem; font-weight: 700; flex: 1; }
-    .cat-variant { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; margin-top: 6px; margin-left: 44px; background: #171c30; border: 1px solid #232946; border-radius: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .cat-variant { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; margin-top: 6px; margin-left: 44px; background: #171c30; border: 1px solid #232946; border-radius: 8px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
     .cat-variant:hover { border-color: #5d78e6; }
+    .cat-variant.sel { border-color: #5d78e6; background: #1c2650; }
+    .cat-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 1px solid #2e365a; border-radius: 4px; margin-right: 8px; font-size: 11px; color: transparent; flex-shrink: 0; }
+    .cat-variant.sel .cat-check { background: #334fb4; border-color: #4a63d8; color: #fff; }
+    .cat-vleft { display: flex; align-items: center; min-width: 0; }
     .cat-variant.single { margin-left: 0; margin-top: 8px; }
     .cat-vtitle { font-size: 0.78rem; color: #c9d1d9; }
     .cat-vprice { font-size: 0.8rem; font-weight: 700; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
@@ -153,6 +157,10 @@
       <input type="search" id="cat-search" class="cat-search" placeholder="Search products…" oninput="renderCatalog()">
       <div class="cat-list" id="cat-list"></div>
     </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closePicker()">Cancel</button>
+      <button class="btn btn-primary" id="picker-add-btn" onclick="addSelected()" disabled>Add selected</button>
+    </div>
   </div>
 </div>
 
@@ -212,18 +220,23 @@ async function loadCatalog() {
   }
 }
 
+let pickerSel = new Set(); // "productIdx:variantIdx" keys selected in the picker
+
 window.renderCatalog = function() {
   if (!catalog) return;
   const q = $('cat-search').value.trim().toLowerCase();
   const list = catalog.products.filter(p => !q || p.title.toLowerCase().includes(q));
-  $('cat-list').innerHTML = list.map((p, pi) => {
+  $('cat-list').innerHTML = list.map(p => {
     const realIdx = catalog.products.indexOf(p);
     const single = p.variants.length === 1 && p.variants[0].title === 'Default Title';
-    const vRows = p.variants.map((v, vi) => `
-      <div class="cat-variant${single ? ' single' : ''}" onclick="pickVariant(${realIdx},${vi})">
-        <span class="cat-vtitle">${single ? 'Add to quote' : esc(v.title)}</span>
+    const vRows = p.variants.map((v, vi) => {
+      const sel = pickerSel.has(`${realIdx}:${vi}`);
+      return `
+      <div class="cat-variant${single ? ' single' : ''}${sel ? ' sel' : ''}" onclick="pickVariant(${realIdx},${vi})">
+        <span class="cat-vleft"><span class="cat-check">✓</span><span class="cat-vtitle">${single ? 'Select' : esc(v.title)}</span></span>
         <span class="cat-vprice">${v.available ? '' : '<span class="cat-oos">out of stock</span>'}${money(v.price_cents)}</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     return `<div class="cat-product">
       <div class="cat-product-hdr">
         ${p.image ? `<img class="cat-img" src="${esc(p.image)}" loading="lazy" alt="">` : '<div class="cat-img"></div>'}
@@ -233,18 +246,40 @@ window.renderCatalog = function() {
   }).join('') || '<div class="li-empty">No products match.</div>';
 };
 
+// Click toggles selection; nothing is added until "Add selected"
 window.pickVariant = function(pi, vi) {
-  const p = catalog.products[pi];
-  const v = p.variants[vi];
-  const detail = v.title === 'Default Title' ? '' : v.title;
-  const existing = lineItems.find(it => it.variant_id === v.id);
-  if (existing) { existing.qty += 1; }
-  else lineItems.push({ title: p.title, detail, unit_price_cents: v.price_cents, qty: 1, variant_id: v.id, custom: false, discount_type: 'amount', discount_value: null });
+  const key = `${pi}:${vi}`;
+  if (pickerSel.has(key)) pickerSel.delete(key); else pickerSel.add(key);
+  renderCatalog();
+  updatePickerBtn();
+};
+
+function updatePickerBtn() {
+  const btn = $('picker-add-btn');
+  btn.disabled = pickerSel.size === 0;
+  btn.textContent = pickerSel.size ? `Add ${pickerSel.size} item${pickerSel.size > 1 ? 's' : ''}` : 'Add selected';
+}
+
+window.addSelected = function() {
+  for (const key of pickerSel) {
+    const [pi, vi] = key.split(':').map(Number);
+    const p = catalog.products[pi];
+    const v = p.variants[vi];
+    const detail = v.title === 'Default Title' ? '' : v.title;
+    const existing = lineItems.find(it => it.variant_id === v.id);
+    if (existing) { existing.qty += 1; }
+    else lineItems.push({ title: p.title, detail, unit_price_cents: v.price_cents, qty: 1, variant_id: v.id, custom: false, discount_type: 'amount', discount_value: null });
+  }
+  const n = pickerSel.size;
+  pickerSel.clear();
   renderItems();
   closePicker();
+  toast(`${n} item${n > 1 ? 's' : ''} added to quote`);
 };
 
 window.openPicker = function() {
+  pickerSel.clear();
+  updatePickerBtn();
   $('picker-modal').classList.remove('hidden');
   $('cat-search').value = '';
   renderCatalog();
@@ -471,7 +506,7 @@ function buildPdf(quote) {
   const BLUE = [29, 143, 232];       // site accent (--orange var, actually blue)
   const items = JSON.parse(quote.line_items || '[]');
   const created = quote.created_at ? new Date(quote.created_at.replace(' ', 'T') + 'Z') : new Date();
-  const validUntil = new Date(created.getTime() + 30 * 24 * 3600 * 1000);
+  const validUntil = new Date(created.getTime() + 15 * 24 * 3600 * 1000);
   const fmtDate = d => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   // Header: navy band, darker angled panel on the right, blue accent strip
