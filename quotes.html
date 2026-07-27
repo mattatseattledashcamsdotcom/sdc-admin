@@ -382,9 +382,10 @@ async function lookupTaxRate() {
     const data = await res.json();
     $('q-tax').value = data.rate_percent;
     taxExact = data.exact;
+    const juris = data.jurisdiction ? ` (${data.jurisdiction})` : '';
     $('tax-status').textContent = data.exact
-      ? `${data.rate_percent}% — WA DOR, exact address match`
-      : `${data.rate_percent}% — WA DOR estimate (ZIP-level; street not matched)`;
+      ? `${data.rate_percent}%${juris} — WA DOR, exact address match`
+      : `${data.rate_percent}%${juris} — ZIP-level estimate; check street spelling`;
     refreshTotals();
   } catch {
     $('tax-status').textContent = 'Lookup failed — enter rate manually';
