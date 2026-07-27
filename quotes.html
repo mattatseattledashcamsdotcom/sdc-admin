@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <title>Quotes — SDC Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SDC Admin">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    .quote-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+    .quote-grid > div { min-width: 0; }
+    @media (max-width: 1000px) { .quote-grid { grid-template-columns: 1fr; } }
+
+    .li-table { width: 100%; border-collapse: collapse; }
+    .li-table th { padding: 8px 10px; text-align: left; font-size: 0.66rem; font-weight: 700; color: #484f58; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #232946; }
+    .li-table td { padding: 10px; border-bottom: 1px solid #1e2338; font-size: 0.82rem; vertical-align: middle; }
+    .li-title { font-weight: 600; color: #f8fafc; }
+    .li-detail { font-size: 0.72rem; color: #8b949e; margin-top: 1px; }
+    .li-qty { width: 52px; min-width: 52px; text-align: center; padding: 8px 4px; }
+    .li-price { width: 88px; min-width: 88px; text-align: right; padding: 8px 8px; }
+    .li-disc-wrap { display: flex; gap: 4px; justify-content: flex-end; }
+    .li-disc { width: 62px; min-width: 62px; text-align: right; padding: 8px 6px; }
+    .li-disc-type { width: 48px; min-width: 48px; padding: 8px 2px; }
+    .li-table input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .li-amount { font-weight: 700; text-align: right; white-space: nowrap; }
+    .li-remove { background: none; border: none; color: #484f58; cursor: pointer; font-size: 1rem; padding: 4px 8px; border-radius: 6px; }
+    .li-remove:hover { color: #f85149; background: #1e2338; }
+    .li-empty { color: #484f58; font-size: 0.82rem; padding: 24px 10px; text-align: center; }
+
+    .totals-row { display: flex; justify-content: space-between; font-size: 0.84rem; padding: 6px 0; color: #c9d1d9; }
+    .totals-row.grand { font-size: 1.05rem; font-weight: 800; color: #f8fafc; border-top: 1px solid #2e365a; margin-top: 8px; padding-top: 12px; }
+    .totals-note { font-size: 0.7rem; color: #8b949e; margin-top: 8px; line-height: 1.4; }
+
+    .cat-search { margin-bottom: 12px; }
+    .cat-list { max-height: 420px; overflow-y: auto; }
+    .cat-product { padding: 10px 12px; border: 1px solid #232946; border-radius: 10px; margin-bottom: 6px; background: #10142a; }
+    .cat-product-hdr { display: flex; align-items: center; gap: 10px; }
+    .cat-img { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; background: #232946; flex-shrink: 0; }
+    .cat-title { font-size: 0.84rem; font-weight: 700; flex: 1; }
+    .cat-variant { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; margin-top: 6px; margin-left: 44px; background: #171c30; border: 1px solid #232946; border-radius: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .cat-variant:hover { border-color: #5d78e6; }
+    .cat-variant.single { margin-left: 0; margin-top: 8px; }
+    .cat-vtitle { font-size: 0.78rem; color: #c9d1d9; }
+    .cat-vprice { font-size: 0.8rem; font-weight: 700; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+    .cat-oos { font-size: 0.62rem; color: #f0883e; font-weight: 700; text-transform: uppercase; }
+    .cat-status { font-size: 0.72rem; color: #8b949e; margin-bottom: 10px; }
+
+    .act-btn { background: none; border: 1px solid #2e365a; color: #8b949e; cursor: pointer; border-radius: 6px; padding: 4px 8px; font-size: 0.72rem; margin-right: 4px; }
+    .act-btn:hover { color: #e6edf3; background: #1e2338; }
+    .act-btn.danger:hover { color: #f85149; }
+  </style>
+</head>
+<body>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Quotes</div>
+      <div class="topbar-sub">Build a quote with live Shopify pricing — download the PDF or email it</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-secondary btn-sm" onclick="resetBuilder()">Clear / New</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="quote-grid">
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-hdr"><div class="card-hdr-title">Customer</div></div>
+          <div class="card-body">
+            <div class="form-row" style="margin-bottom:16px">
+              <div class="form-group" style="margin-bottom:0"><label>Name *</label><input type="text" id="q-name" placeholder="John Smith"></div>
+              <div class="form-group" style="margin-bottom:0"><label>Email</label><input type="email" id="q-email" placeholder="john@email.com"></div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;max-width:calc(50% - 8px)"><label>Phone</label><input type="text" id="q-phone" placeholder="(206) 555-1234"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-hdr-title">Line Items</div>
+            <div>
+              <button class="btn btn-secondary btn-sm" onclick="addCustomItem()">+ Custom Item</button>
+              <button class="btn btn-primary btn-sm" onclick="openPicker()">+ Add Product</button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0 8px;overflow-x:auto">
+            <table class="li-table">
+              <thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Discount</th><th style="text-align:right">Amount</th><th></th></tr></thead>
+              <tbody id="li-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-hdr"><div class="card-hdr-title">Totals</div></div>
+          <div class="card-body">
+            <div class="totals-row"><span>Subtotal</span><span id="t-subtotal">$0.00</span></div>
+            <div class="totals-row" id="t-disc-row" style="display:none;color:#3fb950"><span id="t-disc-label">Discount</span><span id="t-disc">−$0.00</span></div>
+            <div class="totals-row" id="t-tax-row" style="display:none"><span id="t-tax-label">Tax</span><span id="t-tax">$0.00</span></div>
+            <div class="totals-row grand"><span>Total</span><span id="t-total">$0.00</span></div>
+            <div class="totals-note" id="t-note">Sales tax not included — add a rate below to show it on the quote.</div>
+            <hr class="divider">
+            <div class="form-group"><label>Discount — whole quote (optional)</label>
+              <div style="display:flex;gap:6px">
+                <input type="number" id="q-disc" min="0" step="0.01" placeholder="e.g. 50" oninput="renderItems()">
+                <select id="q-disc-type" style="width:86px" onchange="renderItems()"><option value="amount">$ off</option><option value="percent">% off</option></select>
+              </div>
+            </div>
+            <div class="form-group"><label>Sales tax % (optional)</label><input type="number" id="q-tax" step="0.1" min="0" max="25" placeholder="e.g. 10.2" oninput="renderItems()"></div>
+            <div class="form-group" style="margin-bottom:0"><label>Notes on quote (optional)</label><textarea id="q-notes" placeholder="Includes mobile installation at your location. 50% deposit to book."></textarea></div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;margin-bottom:10px" onclick="startEmail()">Email PDF to Customer</button>
+        <button class="btn btn-secondary" style="width:100%;justify-content:center;padding:11px" onclick="downloadPdf()">Download PDF</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:24px">
+      <div class="card-hdr"><div class="card-hdr-title">Quote History</div></div>
+      <div style="overflow-x:auto">
+        <table class="table" id="hist-table">
+          <thead><tr><th>#</th><th>Date</th><th>Customer</th><th class="hide-mobile">Email</th><th style="text-align:right">Total</th><th>Status</th><th></th></tr></thead>
+          <tbody id="hist-rows"><tr><td colspan="7" class="loading">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Product picker modal -->
+<div class="modal-backdrop hidden" id="picker-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr">
+      <div class="modal-title">Add Product <span style="font-weight:400;font-size:0.72rem;color:#8b949e">(live Shopify prices)</span></div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closePicker()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="cat-status" id="cat-status">Loading live catalog…</div>
+      <input type="search" id="cat-search" class="cat-search" placeholder="Search products…" oninput="renderCatalog()">
+      <div class="cat-list" id="cat-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Email modal -->
+<div class="modal-backdrop hidden" id="email-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="email-title">Email Quote</div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeEmail()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="notice">Sends from <b>info@seattledashcams.com</b> with the PDF attached. Replies go to matt@seattledashcams.com.</div>
+      <div class="form-group"><label>To *</label><input type="email" id="em-to"></div>
+      <div class="form-group"><label>Subject</label><input type="text" id="em-subject"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Message</label><textarea id="em-message" style="min-height:120px"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEmail()">Cancel</button>
+      <button class="btn btn-primary" id="em-send-btn" onclick="confirmSendEmail()">Send Quote</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, renderShell } from './shell.js';
+import { api } from './config.js';
+
+requireAuth();
+renderShell({ active: 'quotes' });
+
+const NAVY = [47, 49, 143];
+const GRAY = [120, 128, 145];
+const DARK = [26, 30, 40];
+
+let catalog = null;          // live product catalog from worker
+let lineItems = [];          // current builder line items
+let history = [];            // saved quotes
+let emailContext = null;     // quote being emailed (null = builder contents)
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const money = c => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// ── Catalog ──────────────────────────────────────────────────────────────────
+async function loadCatalog() {
+  try {
+    const res = await api('/admin/quotes/catalog');
+    if (!res.ok) throw new Error();
+    catalog = await res.json();
+    const t = new Date(catalog.fetched_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    $('cat-status').textContent = `${catalog.products.length} products · prices fetched live at ${t}`;
+    renderCatalog();
+  } catch {
+    $('cat-status').textContent = 'Could not load catalog — check connection and reload.';
+  }
+}
+
+window.renderCatalog = function() {
+  if (!catalog) return;
+  const q = $('cat-search').value.trim().toLowerCase();
+  const list = catalog.products.filter(p => !q || p.title.toLowerCase().includes(q));
+  $('cat-list').innerHTML = list.map((p, pi) => {
+    const realIdx = catalog.products.indexOf(p);
+    const single = p.variants.length === 1 && p.variants[0].title === 'Default Title';
+    const vRows = p.variants.map((v, vi) => `
+      <div class="cat-variant${single ? ' single' : ''}" onclick="pickVariant(${realIdx},${vi})">
+        <span class="cat-vtitle">${single ? 'Add to quote' : esc(v.title)}</span>
+        <span class="cat-vprice">${v.available ? '' : '<span class="cat-oos">out of stock</span>'}${money(v.price_cents)}</span>
+      </div>`).join('');
+    return `<div class="cat-product">
+      <div class="cat-product-hdr">
+        ${p.image ? `<img class="cat-img" src="${esc(p.image)}" loading="lazy" alt="">` : '<div class="cat-img"></div>'}
+        <div class="cat-title">${esc(p.title)}</div>
+      </div>${vRows}
+    </div>`;
+  }).join('') || '<div class="li-empty">No products match.</div>';
+};
+
+window.pickVariant = function(pi, vi) {
+  const p = catalog.products[pi];
+  const v = p.variants[vi];
+  const detail = v.title === 'Default Title' ? '' : v.title;
+  const existing = lineItems.find(it => it.variant_id === v.id);
+  if (existing) { existing.qty += 1; }
+  else lineItems.push({ title: p.title, detail, unit_price_cents: v.price_cents, qty: 1, variant_id: v.id, custom: false, discount_type: 'amount', discount_value: null });
+  renderItems();
+  closePicker();
+};
+
+window.openPicker = function() {
+  $('picker-modal').classList.remove('hidden');
+  $('cat-search').value = '';
+  renderCatalog();
+  if (window.matchMedia('(min-width: 769px)').matches) $('cat-search').focus();
+};
+window.closePicker = () => $('picker-modal').classList.add('hidden');
+
+window.addCustomItem = function() {
+  lineItems.push({ title: '', detail: '', unit_price_cents: 0, qty: 1, variant_id: null, custom: true, discount_type: 'amount', discount_value: null });
+  renderItems();
+  setTimeout(() => { const rows = document.querySelectorAll('.li-custom-title'); rows[rows.length - 1]?.focus(); }, 0);
+};
+
+// ── Line items / totals ──────────────────────────────────────────────────────
+// value = dollars for 'amount', percentage for 'percent'; base in cents; clamped to [0, base]
+const discCents = (type, value, base) => {
+  if (!value) return 0;
+  const raw = type === 'percent' ? Math.round(base * value / 100) : Math.round(value * 100);
+  return Math.max(0, Math.min(raw, base));
+};
+const lineNet = it => {
+  const gross = it.unit_price_cents * it.qty;
+  return gross - discCents(it.discount_type, it.discount_value, gross);
+};
+
+window.renderItems = function() {
+  const tbody = $('li-rows');
+  if (!lineItems.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="li-empty">No items yet — add a product or custom item.</td></tr>';
+  } else {
+    tbody.innerHTML = lineItems.map((it, i) => `<tr>
+      <td>${it.custom
+        ? `<input type="text" class="li-custom-title" value="${esc(it.title)}" placeholder="Describe the item…" oninput="updateItem(${i},'title',this.value)">`
+        : `<div class="li-title">${esc(it.title)}</div>${it.detail ? `<div class="li-detail">${esc(it.detail)}</div>` : ''}`}</td>
+      <td style="text-align:center"><input type="number" class="li-qty" min="1" max="99" value="${it.qty}" oninput="updateItem(${i},'qty',this.value)"></td>
+      <td style="text-align:right"><input type="number" class="li-price" step="0.01" min="0" value="${(it.unit_price_cents / 100).toFixed(2)}" oninput="updateItem(${i},'price',this.value)"></td>
+      <td><div class="li-disc-wrap">
+        <input type="number" class="li-disc" min="0" step="0.01" placeholder="0" value="${it.discount_value ?? ''}" oninput="updateItem(${i},'discval',this.value)">
+        <select class="li-disc-type" onchange="updateItem(${i},'disctype',this.value)">
+          <option value="amount"${it.discount_type !== 'percent' ? ' selected' : ''}>$</option>
+          <option value="percent"${it.discount_type === 'percent' ? ' selected' : ''}>%</option>
+        </select>
+      </div></td>
+      <td class="li-amount">${money(lineNet(it))}</td>
+      <td><button class="li-remove" onclick="removeItem(${i})" title="Remove">✕</button></td>
+    </tr>`).join('');
+  }
+  refreshTotals();
+};
+
+function refreshTotals() {
+  const { subtotal, discLabel, disc, taxRate, taxCents, total } = computeTotals();
+  $('t-subtotal').textContent = money(subtotal);
+  if (disc > 0) {
+    $('t-disc-row').style.display = 'flex';
+    $('t-disc-label').textContent = discLabel;
+    $('t-disc').textContent = '−' + money(disc);
+  } else {
+    $('t-disc-row').style.display = 'none';
+  }
+  if (taxRate != null) {
+    $('t-tax-row').style.display = 'flex';
+    $('t-tax-label').textContent = `Sales tax (${taxRate}%)`;
+    $('t-tax').textContent = money(taxCents);
+    $('t-note').style.display = 'none';
+  } else {
+    $('t-tax-row').style.display = 'none';
+    $('t-note').style.display = 'block';
+  }
+  $('t-total').textContent = money(total);
+}
+
+window.updateItem = function(i, field, value) {
+  const it = lineItems[i];
+  if (!it) return;
+  if (field === 'title') it.title = value;
+  if (field === 'qty') it.qty = Math.max(1, Math.min(99, parseInt(value) || 1));
+  if (field === 'price') it.unit_price_cents = Math.max(0, Math.round(parseFloat(value || 0) * 100));
+  if (field === 'discval') it.discount_value = value === '' ? null : Math.max(0, parseFloat(value) || 0);
+  if (field === 'disctype') it.discount_type = value;
+  if (it.discount_type === 'percent' && it.discount_value > 100) it.discount_value = 100;
+  // Update the amount cell + totals only (leave inputs alone so typing isn't interrupted)
+  const rows = $('li-rows').querySelectorAll('tr');
+  const amountCell = rows[i]?.querySelector('.li-amount');
+  if (amountCell) amountCell.textContent = money(lineNet(it));
+  refreshTotals();
+};
+
+window.removeItem = function(i) { lineItems.splice(i, 1); renderItems(); };
+
+function computeTotals() {
+  const subtotal = lineItems.reduce((s, it) => s + lineNet(it), 0);
+  const discRaw = $('q-disc').value.trim();
+  const discType = $('q-disc-type').value;
+  const discValue = discRaw === '' ? null : Math.max(0, parseFloat(discRaw) || 0);
+  const disc = discCents(discType, discValue, subtotal);
+  const discLabel = discType === 'percent' && discValue ? `Discount (${discValue}%)` : 'Discount';
+  const taxable = subtotal - disc;
+  const raw = $('q-tax').value.trim();
+  const taxRate = raw === '' ? null : Math.max(0, Math.min(25, parseFloat(raw) || 0));
+  const taxCents = taxRate != null ? Math.round(taxable * taxRate / 100) : 0;
+  return { subtotal, discType, discValue, disc, discLabel, taxRate, taxCents, total: taxable + taxCents };
+}
+
+window.resetBuilder = function() {
+  lineItems = [];
+  ['q-name', 'q-email', 'q-phone', 'q-disc', 'q-tax', 'q-notes'].forEach(id => $(id).value = '');
+  $('q-disc-type').value = 'amount';
+  renderItems();
+};
+
+// ── Quote creation + PDF ─────────────────────────────────────────────────────
+function builderValid(needEmail) {
+  const name = $('q-name').value.trim();
+  if (!name) { toast('Customer name is required', true); return false; }
+  const items = lineItems.filter(it => it.title.trim());
+  if (!items.length) { toast('Add at least one line item', true); return false; }
+  if (lineItems.some(it => !it.title.trim())) { toast('A custom item is missing a description', true); return false; }
+  if (needEmail && !$('q-email').value.trim().includes('@')) { toast('Customer email is required to send', true); return false; }
+  return true;
+}
+
+async function saveQuote() {
+  const { taxRate, discType, discValue } = computeTotals();
+  const res = await api('/admin/quotes', {
+    method: 'POST',
+    body: JSON.stringify({
+      customer_name: $('q-name').value.trim(),
+      customer_email: $('q-email').value.trim(),
+      customer_phone: $('q-phone').value.trim(),
+      line_items: lineItems.map(it => ({
+        title: it.title.trim(), detail: it.detail || '',
+        unit_price_cents: it.unit_price_cents, qty: it.qty, variant_id: it.variant_id,
+        discount_type: it.discount_value ? it.discount_type : null,
+        discount_value: it.discount_value || null,
+      })),
+      discount_type: discValue ? discType : null,
+      discount_value: discValue || null,
+      tax_rate: taxRate,
+      notes: $('q-notes').value.trim(),
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Could not save quote');
+  }
+  return res.json(); // { id, quote_number }
+}
+
+function builderAsQuote(saved) {
+  const { subtotal, discType, discValue, disc, taxRate, taxCents, total } = computeTotals();
+  return {
+    id: saved.id,
+    quote_number: saved.quote_number,
+    customer_name: $('q-name').value.trim(),
+    customer_email: $('q-email').value.trim(),
+    customer_phone: $('q-phone').value.trim(),
+    line_items: JSON.stringify(lineItems.filter(it => it.title.trim())),
+    discount_type: discValue ? discType : null,
+    discount_value: discValue || null,
+    discount_cents: disc,
+    tax_rate: taxRate,
+    subtotal_cents: subtotal, tax_cents: taxCents, total_cents: total,
+    notes: $('q-notes').value.trim(),
+    created_at: null, // renders as today
+  };
+}
+
+function buildPdf(quote) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const W = 612, L = 48, R = 564;
+  const items = JSON.parse(quote.line_items || '[]');
+  const created = quote.created_at ? new Date(quote.created_at.replace(' ', 'T') + 'Z') : new Date();
+  const validUntil = new Date(created.getTime() + 30 * 24 * 3600 * 1000);
+  const fmtDate = d => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Header band
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, W, 100, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(19);
+  doc.text('SEATTLE DASH CAMS', L, 44);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+  doc.text('Professional Dash Cam Sales & Mobile Installation', L, 60);
+  doc.text('seattledashcams.com  ·  (206) 552-0856  ·  info@seattledashcams.com', L, 74);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(24);
+  doc.text('QUOTE', R, 48, { align: 'right' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text(`#${quote.quote_number}`, R, 66, { align: 'right' });
+
+  // Customer + dates
+  let y = 138;
+  doc.setTextColor(...GRAY); doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
+  doc.text('PREPARED FOR', L, y);
+  doc.setTextColor(...DARK); doc.setFontSize(11);
+  doc.text(quote.customer_name, L, y + 16);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
+  let cy = y + 30;
+  if (quote.customer_email) { doc.text(quote.customer_email, L, cy); cy += 13; }
+  if (quote.customer_phone) { doc.text(quote.customer_phone, L, cy); cy += 13; }
+
+  doc.setFontSize(9.5);
+  doc.setTextColor(...GRAY); doc.text('Quote date:', 400, y + 16);
+  doc.setTextColor(...DARK); doc.text(fmtDate(created), R, y + 16, { align: 'right' });
+  doc.setTextColor(...GRAY); doc.text('Valid until:', 400, y + 32);
+  doc.setTextColor(...DARK); doc.text(fmtDate(validUntil), R, y + 32, { align: 'right' });
+
+  // Items table
+  y = Math.max(cy + 24, y + 64);
+  const drawTableHeader = () => {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...NAVY);
+    doc.text('DESCRIPTION', L, y);
+    doc.text('QTY', 392, y, { align: 'center' });
+    doc.text('UNIT PRICE', 478, y, { align: 'right' });
+    doc.text('AMOUNT', R, y, { align: 'right' });
+    doc.setDrawColor(...NAVY); doc.setLineWidth(1);
+    doc.line(L, y + 7, R, y + 7);
+    y += 24;
+  };
+  drawTableHeader();
+
+  for (const it of items) {
+    if (y > 690) { doc.addPage(); y = 60; drawTableHeader(); }
+    const gross = it.unit_price_cents * it.qty;
+    const dc = discCents(it.discount_type, it.discount_value, gross);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
+    const titleLines = doc.splitTextToSize(it.title, 300);
+    doc.text(titleLines, L, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(it.qty), 392, y, { align: 'center' });
+    doc.text(money(it.unit_price_cents), 478, y, { align: 'right' });
+    doc.text(money(gross - dc), R, y, { align: 'right' });
+    let rowH = titleLines.length * 12;
+    if (it.detail) {
+      doc.setFontSize(8); doc.setTextColor(...GRAY);
+      doc.text(it.detail, L, y + rowH);
+      rowH += 12;
+    }
+    if (dc > 0) {
+      doc.setFontSize(8); doc.setTextColor(22, 133, 62);
+      const dLabel = it.discount_type === 'percent' ? `Discount (${it.discount_value}%): -${money(dc)}` : `Discount: -${money(dc)}`;
+      doc.text(dLabel, L, y + rowH);
+      rowH += 12;
+    }
+    y += rowH + 6;
+    doc.setDrawColor(228, 230, 236); doc.setLineWidth(0.5);
+    doc.line(L, y - 2, R, y - 2);
+    y += 12;
+  }
+
+  // Totals
+  if (y > 640) { doc.addPage(); y = 60; }
+  const tx = 360;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
+  doc.text('Subtotal', tx, y);
+  doc.text(money(quote.subtotal_cents), R, y, { align: 'right' });
+  y += 16;
+  if (quote.discount_cents > 0) {
+    doc.setTextColor(22, 133, 62);
+    const dLabel = quote.discount_type === 'percent' ? `Discount (${quote.discount_value}%)` : 'Discount';
+    doc.text(dLabel, tx, y);
+    doc.text('-' + money(quote.discount_cents), R, y, { align: 'right' });
+    doc.setTextColor(...DARK);
+    y += 16;
+  }
+  if (quote.tax_rate != null && quote.tax_cents > 0) {
+    doc.text(`Sales tax (${quote.tax_rate}%)`, tx, y);
+    doc.text(money(quote.tax_cents), R, y, { align: 'right' });
+    y += 16;
+  }
+  doc.setDrawColor(...NAVY); doc.setLineWidth(1);
+  doc.line(tx, y - 6, R, y - 6);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...NAVY);
+  doc.text('Total', tx, y + 10);
+  doc.text(money(quote.total_cents), R, y + 10, { align: 'right' });
+  y += 28;
+  if (quote.tax_rate == null) {
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('Applicable WA sales tax not included.', R, y, { align: 'right' });
+    y += 14;
+  }
+
+  // Notes
+  if (quote.notes) {
+    y += 10;
+    if (y > 680) { doc.addPage(); y = 60; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...GRAY);
+    doc.text('NOTES', L, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...DARK);
+    doc.text(doc.splitTextToSize(quote.notes, R - L), L, y + 14);
+  }
+
+  // Footer
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('Thank you for considering Seattle Dash Cams! Questions? Call or text (206) 552-0856.', W / 2, 752, { align: 'center' });
+    doc.text(`Quote #${quote.quote_number}  ·  seattledashcams.com`, W / 2, 764, { align: 'center' });
+  }
+  return doc;
+}
+
+function pdfBase64(doc) {
+  const bytes = new Uint8Array(doc.output('arraybuffer'));
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
+}
+
+// ── Download flow ────────────────────────────────────────────────────────────
+window.downloadPdf = async function() {
+  if (!builderValid(false)) return;
+  try {
+    const saved = await saveQuote();
+    const quote = builderAsQuote(saved);
+    buildPdf(quote).save(`Seattle-Dash-Cams-Quote-${saved.quote_number}.pdf`);
+    await api(`/admin/quotes/${saved.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'downloaded' }) });
+    toast(`Quote #${saved.quote_number} downloaded`);
+    loadHistory();
+  } catch (e) { toast(e.message || 'Error creating quote', true); }
+};
+
+// ── Email flow ───────────────────────────────────────────────────────────────
+window.startEmail = function() {
+  if (!builderValid(true)) return;
+  emailContext = null; // null = send from builder (creates a new quote)
+  openEmailModal($('q-email').value.trim(), $('q-name').value.trim(), null);
+};
+
+function openEmailModal(to, name, quoteNumber) {
+  $('email-title').textContent = quoteNumber ? `Email Quote #${quoteNumber}` : 'Email Quote';
+  $('em-to').value = to;
+  $('em-subject').value = quoteNumber
+    ? `Your quote from Seattle Dash Cams (Quote #${quoteNumber})`
+    : 'Your quote from Seattle Dash Cams';
+  $('em-message').value = `Hi ${name.split(' ')[0]},\n\nThanks for your interest! Your quote is attached as a PDF.\n\nReply to this email or call/text (206) 552-0856 with any questions.\n\n— Matt\nSeattle Dash Cams`;
+  $('email-modal').classList.remove('hidden');
+}
+window.closeEmail = () => $('email-modal').classList.add('hidden');
+
+window.confirmSendEmail = async function() {
+  const btn = $('em-send-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    let quote;
+    if (emailContext) {
+      quote = emailContext;
+    } else {
+      const saved = await saveQuote();
+      quote = builderAsQuote(saved);
+    }
+    const to = $('em-to').value.trim();
+    // Subject line in the modal may predate quote creation — fill in the real number
+    let subject = $('em-subject').value.trim();
+    if (!subject.includes('#')) subject += ` (Quote #${quote.quote_number})`;
+    const res = await api(`/admin/quotes/${quote.id}/send`, {
+      method: 'POST',
+      body: JSON.stringify({
+        to,
+        subject,
+        message: $('em-message').value,
+        pdf_base64: pdfBase64(buildPdf(quote)),
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Send failed');
+    }
+    toast(`Quote #${quote.quote_number} emailed to ${to}`);
+    closeEmail();
+    loadHistory();
+  } catch (e) { toast(e.message || 'Send failed', true); }
+  finally { btn.disabled = false; btn.textContent = 'Send Quote'; }
+};
+
+// ── History ──────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const res = await api('/admin/quotes');
+    if (!res.ok) throw new Error();
+    history = await res.json();
+    renderHistory();
+  } catch {
+    $('hist-rows').innerHTML = '<tr><td colspan="7" class="loading">Could not load history</td></tr>';
+  }
+}
+
+const BADGES = { sent: 'badge-green', downloaded: 'badge-blue', draft: 'badge-gray' };
+function renderHistory() {
+  if (!history.length) {
+    $('hist-rows').innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-title">No quotes yet</div>Build one above — it lands here once downloaded or sent.</div></td></tr>';
+    return;
+  }
+  $('hist-rows').innerHTML = history.map((q, i) => {
+    const d = new Date(q.created_at.replace(' ', 'T') + 'Z');
+    return `<tr onclick="loadIntoBuilder(${i})" title="Click to load into builder">
+      <td style="font-weight:700">#${q.quote_number}</td>
+      <td>${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
+      <td>${esc(q.customer_name)}</td>
+      <td class="hide-mobile" style="color:#8b949e">${esc(q.customer_email || '—')}</td>
+      <td style="text-align:right;font-weight:700">${money(q.total_cents)}</td>
+      <td><span class="badge ${BADGES[q.status] || 'badge-gray'}">${q.status}</span></td>
+      <td style="white-space:nowrap" onclick="event.stopPropagation()">
+        <button class="act-btn" onclick="histDownload(${i})" title="Download PDF">PDF</button>
+        <button class="act-btn" onclick="histEmail(${i})" title="Email to customer">Email</button>
+        <button class="act-btn danger" onclick="histDelete(${i})" title="Delete">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+window.histDownload = function(i) {
+  const q = history[i];
+  buildPdf(q).save(`Seattle-Dash-Cams-Quote-${q.quote_number}.pdf`);
+  toast(`Quote #${q.quote_number} downloaded`);
+};
+
+window.histEmail = function(i) {
+  const q = history[i];
+  if (!q.customer_email) { toast('This quote has no customer email — load it, add one, and send', true); return; }
+  emailContext = q;
+  openEmailModal(q.customer_email, q.customer_name, q.quote_number);
+};
+
+window.histDelete = async function(i) {
+  const q = history[i];
+  if (!confirm(`Delete quote #${q.quote_number} for ${q.customer_name}?`)) return;
+  const res = await api(`/admin/quotes/${q.id}`, { method: 'DELETE' });
+  if (res.ok) { toast(`Quote #${q.quote_number} deleted`); loadHistory(); }
+  else toast('Delete failed', true);
+};
+
+window.loadIntoBuilder = function(i) {
+  const q = history[i];
+  $('q-name').value = q.customer_name;
+  $('q-email').value = q.customer_email || '';
+  $('q-phone').value = q.customer_phone || '';
+  $('q-disc').value = q.discount_value ?? '';
+  $('q-disc-type').value = q.discount_type || 'amount';
+  $('q-tax').value = q.tax_rate ?? '';
+  $('q-notes').value = q.notes || '';
+  lineItems = JSON.parse(q.line_items || '[]').map(it => ({ ...it, custom: !it.variant_id, discount_type: it.discount_type || 'amount', discount_value: it.discount_value ?? null }));
+  renderItems();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toast(`Quote #${q.quote_number} loaded — sending or downloading creates a new quote #`);
+};
+
+// ── Misc ─────────────────────────────────────────────────────────────────────
+window.toast = function(msg, err = false) {
+  const el = document.createElement('div');
+  el.className = `toast ${err ? 'toast-error' : 'toast-success'}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+};
+
+['picker-modal', 'email-modal'].forEach(id => {
+  $(id).addEventListener('click', e => { if (e.target === $(id)) $(id).classList.add('hidden'); });
+});
+
+renderItems();
+loadCatalog();
+loadHistory();
+</script>
+</body>
+</html>
