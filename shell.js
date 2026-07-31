@@ -17,6 +17,7 @@ export function renderShell({ active }) {
     { id: 'configurator', label: 'Product Configurator', href: 'configurator.html', icon: `<path d="M2 4h12M2 8h8M2 12h10"/><circle cx="13" cy="12" r="2.5"/><path d="M13 10.5v1l.7.7"/>` },
     { id: 'finder', label: 'Finder / Quiz', href: 'finder.html', icon: `<circle cx="7" cy="7" r="5"/><path d="M10.5 10.5l3.5 3.5"/><path d="M5 7h4M7 5v4"/>` },
     { id: 'schedule', label: 'Schedule Editor', href: 'schedule.html', icon: `<circle cx="8" cy="8" r="6"/><path d="M8 4.5v3.5l2.5 2"/>` },
+    { id: 'zone-calendar', label: 'Zone Calendar', href: 'zone-calendar.html', icon: `<rect x="2" y="3" width="12" height="12" rx="2"/><path d="M5 1v4M11 1v4M2 8h12"/><circle cx="8" cy="11.5" r="1.5"/>` },
     { id: 'reminders', label: 'Reminders', href: 'reminders.html', icon: `<path d="M13 3l-1.5 5H10L8.5 13 6 7H4.5L3 3"/>` },
     { id: 'followups', label: 'Follow-ups', href: 'followups.html', icon: `<path d="M2 11l4-4 3 3 5-6"/>` },
   ];
@@ -25,7 +26,7 @@ export function renderShell({ active }) {
     'Bookings': ['appointments', 'zip-lookup'],
     'Sales': ['quotes'],
     'Catalog': ['configurator', 'finder'],
-    'Scheduling': ['schedule'],
+    'Scheduling': ['schedule', 'zone-calendar'],
     'Automation': ['reminders', 'followups'],
   };
 

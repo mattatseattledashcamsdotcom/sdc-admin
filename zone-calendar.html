@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <title>Zone Calendar — SDC Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SDC Admin">
+  <style>
+    .zc-legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px;font-size:0.74rem;color:#8b949e}
+    .zc-key{display:inline-flex;align-items:center;gap:6px}
+    .zc-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+    .zc-next{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+    .zc-next-card{background:#171c30;border:1px solid #232946;border-radius:12px;padding:14px 16px}
+    .zc-next-title{font-size:0.78rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+    .zc-next-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:0.78rem;cursor:pointer;border-radius:6px}
+    .zc-next-row:hover{background:#1e2338}
+    .zc-cal-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .zc-cal-month{font-size:0.95rem;font-weight:700}
+    .zc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+    .zc-dow{font-size:0.68rem;font-weight:700;color:#484f58;text-align:center;text-transform:uppercase;letter-spacing:0.05em;padding:4px 0}
+    .zc-cell{background:#171c30;border:1px solid #232946;border-radius:9px;min-height:74px;padding:6px 7px;position:relative;cursor:pointer;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+    .zc-cell:hover{border-color:#2e365a}
+    .zc-cell.off{background:#10131f;cursor:default;opacity:0.45}
+    .zc-cell.off:hover{border-color:#232946}
+    .zc-cell.other-month{opacity:0.28}
+    .zc-cell.today{border-color:#5d78e6}
+    .zc-cell.blocked .zc-zone{opacity:0.35}
+    .zc-daynum{font-size:0.72rem;font-weight:600;color:#8b949e}
+    .zc-cell.today .zc-daynum{color:#7d94f5}
+    .zc-zone{font-size:0.7rem;font-weight:800;border-radius:5px;padding:2px 6px;display:inline-block;width:fit-content;max-width:100%;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .zc-zone .zn-letter{display:none}
+    .zc-blockedtag{font-size:0.62rem;font-weight:700;color:#f85149;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .zc-ovtag{font-size:0.6rem;font-weight:700;color:#bc8cff}
+    .zc-dots{display:flex;gap:3px;margin-top:auto}
+    .zc-dot{width:7px;height:7px;border-radius:50%;border:1.5px solid #3fb950;background:transparent}
+    .zc-dot.full{background:#6e7681;border-color:#6e7681}
+    .zc-slotrow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #232946;font-size:0.8rem}
+    .zc-slotrow:last-child{border-bottom:none}
+    .zc-note{font-size:0.7rem;color:#484f58;margin-top:14px;line-height:1.5}
+    @media(max-width:760px){
+      .zc-next{grid-template-columns:1fr}
+      .zc-cell{min-height:56px;padding:4px 5px}
+      .zc-zone{font-size:0.62rem;padding:1px 5px}
+      .zc-zone .zn-name{display:none}
+      .zc-zone .zn-letter{display:inline}
+      .zc-blockedtag{font-size:0.56rem}
+      .zc-dot{width:5px;height:5px;border-width:1px}
+    }
+  </style>
+</head>
+<body>
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Zone Calendar</div>
+      <div class="topbar-sub">Which area each day serves — computed from the live schedule patterns</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="zc-legend" id="zc-legend"></div>
+    <div class="zc-next" id="zc-next"><div class="loading">Loading…</div></div>
+
+    <div class="card" style="padding:16px">
+      <div class="zc-cal-bar">
+        <button class="btn btn-secondary btn-sm" onclick="moveMonth(-1)">‹ Prev</button>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="zc-cal-month" id="zc-month-label"></div>
+          <button class="btn btn-ghost btn-sm" onclick="goToday()">Today</button>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="moveMonth(1)">Next ›</button>
+      </div>
+      <div class="zc-grid" id="zc-grid"><div class="loading">Loading…</div></div>
+      <div class="zc-note">
+        Renton (98055–59) is bookable at 8:00 &amp; 3:30 on every worked day regardless of zone.
+        Far-end "AM band" ZIPs get morning slots (8:00 + 10:30) only.
+        Slot dots: <span style="color:#3fb950">open</span> / <span style="color:#6e7681">booked</span>.
+        Saturdays show their pattern zone — whether a Saturday is worked is controlled by block dates.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DAY MODAL -->
+<div class="modal-backdrop hidden" id="day-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="day-modal-title"></div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('day-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="day-modal-body"></div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, renderShell } from './shell.js';
+import { api } from './config.js';
+
+requireAuth();
+renderShell({ active: 'zone-calendar' });
+
+// ── Zone identity: classify a pattern's ZIP list by sentinel membership.
+// Sentinels are stable core ZIPs of each zone; classification is derived from
+// the live patterns so overrides / future pattern edits stay correct.
+const SENTINELS = { E: ['98004','98033','98052'], W: ['98101','98103','98115'], S: ['98030','98031','98042'] };
+const ZONES = {
+  E: { name: 'East',  color: '#7d94f5', bg: 'rgba(93,120,230,0.16)' },
+  W: { name: 'West',  color: '#3fb950', bg: 'rgba(63,185,80,0.14)' },
+  S: { name: 'South', color: '#e3a341', bg: 'rgba(227,163,65,0.14)' },
+  M: { name: 'Mixed', color: '#bc8cff', bg: 'rgba(188,140,255,0.14)' },
+};
+
+let slots = [], patterns = [], anchors = {}, blocks = [], overrides = [], bookings = [], operatingDays = ['tue','wed','thu','fri','sat'];
+let viewYear, viewMonth; // month is 0-11
+const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+
+// ── date helpers — exact same semantics as the worker (availability.js) ──
+function getMondayOf(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  const day = d.getUTCDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+function weeksBetween(anchorStr, dateStr) {
+  const anchor = new Date(getMondayOf(anchorStr) + 'T12:00:00Z');
+  const target = new Date(getMondayOf(dateStr) + 'T12:00:00Z');
+  return Math.round((target - anchor) / (7 * 24 * 3600 * 1000));
+}
+function getDayName(dateStr) {
+  return ['sun','mon','tue','wed','thu','fri','sat'][new Date(dateStr + 'T12:00:00Z').getUTCDay()];
+}
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function toMins(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+
+function getZipsForDate(date, slotId) {
+  const weekOf = getMondayOf(date);
+  const ov = overrides.find(o => o.week_of === weekOf);
+  if (ov) return { zips: JSON.parse(ov.zips), override: ov };
+  const ps = patterns.filter(p => p.slot_id === slotId);
+  if (ps.length === 0) return { zips: [] };
+  if (ps.length === 1) return { zips: JSON.parse(ps[0].zips) };
+  const anchor = anchors[slotId];
+  if (!anchor) return { zips: JSON.parse(ps[0].zips) };
+  const w = weeksBetween(anchor, date);
+  const idx = ((w % ps.length) + ps.length) % ps.length;
+  return { zips: JSON.parse(ps[idx].zips), week: idx + 1, total: ps.length };
+}
+
+function zoneOf(zips) {
+  const set = new Set(zips);
+  const counts = Object.entries(SENTINELS).map(([z, l]) => [z, l.filter(x => set.has(x)).length]);
+  counts.sort((a, b) => b[1] - a[1]);
+  if (counts[0][1] === 0) return null;
+  if (counts[1][1] === counts[0][1]) return 'M';
+  return counts[0][0];
+}
+
+function slotsForDay(dateStr) {
+  const day = getDayName(dateStr);
+  return slots.filter(s => JSON.parse(s.days_of_week).includes(day))
+              .sort((a, b) => a.start_time.localeCompare(b.start_time));
+}
+
+// Zone for a date: prefer the 13:00 slot (core-only ZIPs), then 10:30, then any.
+function dayInfo(dateStr) {
+  const day = getDayName(dateStr);
+  if (!operatingDays.includes(day)) return { working: false };
+  const serving = slotsForDay(dateStr);
+  if (!serving.length) return { working: false };
+  const zoneSlot = serving.find(s => s.start_time === '13:00') || serving.find(s => s.start_time === '10:30') || serving[0];
+  const r = getZipsForDate(dateStr, zoneSlot.id);
+  const block = blocks.find(b => dateStr >= b.start_date && dateStr <= b.end_date);
+  return { working: true, zone: zoneOf(r.zips), week: r.week, total: r.total, override: r.override, block, slots: serving };
+}
+
+function bookingsFor(dateStr) {
+  return bookings.filter(b => b.appointment_date === dateStr && !['rejected','cancelled'].includes(b.status));
+}
+
+// Mirror of the worker's capacity + slot-less-overlap logic
+function slotStatus(dateStr, slot, dayBk) {
+  const assigned = dayBk.filter(b => b.slot_id === slot.id);
+  const sStart = toMins(slot.start_time), sEnd = toMins(slot.end_time);
+  const overlapping = dayBk.filter(b => {
+    if (b.slot_id || !b.appointment_time) return false;
+    const end = b.appointment_end_time ? toMins(b.appointment_end_time) : toMins(b.appointment_time) + 120;
+    return toMins(b.appointment_time) < sEnd && end > sStart;
+  });
+  const full = assigned.length >= slot.capacity || overlapping.length > 0;
+  return { full, names: [...assigned, ...overlapping].map(b => b.customer_name).filter(Boolean) };
+}
+
+function formatTime(t) {
+  const [h, m] = t.split(':');
+  const hr = parseInt(h);
+  return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+}
+function prettyDate(dateStr) {
+  return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+// ── render ──
+function renderLegend() {
+  document.getElementById('zc-legend').innerHTML =
+    ['E','W','S'].map(z => `<span class="zc-key"><span class="zc-swatch" style="background:${ZONES[z].color}"></span>${ZONES[z].name}</span>`).join('') +
+    `<span class="zc-key"><span class="zc-swatch" style="background:#f85149"></span>Blocked</span>` +
+    `<span class="zc-key"><span class="zc-swatch" style="background:#bc8cff"></span>Week override</span>`;
+}
+
+function renderNext() {
+  const buckets = { E: [], W: [], S: [] };
+  for (let i = 0; i < 84; i++) {
+    const date = addDays(todayStr, i);
+    const info = dayInfo(date);
+    if (!info.working || info.block || !buckets[info.zone]) continue;
+    if (buckets[info.zone].length >= 8) continue;
+    const dayBk = bookingsFor(date);
+    const enabled = info.slots.filter(s => s.enabled);
+    const dots = enabled.map(s => {
+      const st = slotStatus(date, s, dayBk);
+      return `<span class="zc-dot ${st.full ? 'full' : ''}" title="${formatTime(s.start_time)}"></span>`;
+    }).join('');
+    const openCount = enabled.filter(s => !slotStatus(date, s, dayBk).full).length;
+    buckets[info.zone].push(`
+      <div class="zc-next-row" onclick="openDay('${date}')">
+        <span>${prettyDate(date)}${info.override ? ' <span class="zc-ovtag">OV</span>' : ''}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:0.66rem;color:${openCount ? '#3fb950' : '#6e7681'}">${openCount ? openCount + ' open' : 'full'}</span>
+          <span class="zc-dots" style="margin:0">${dots}</span>
+        </span>
+      </div>`);
+  }
+  document.getElementById('zc-next').innerHTML = ['E','W','S'].map(z => `
+    <div class="zc-next-card">
+      <div class="zc-next-title" style="color:${ZONES[z].color}">
+        <span class="zc-swatch" style="background:${ZONES[z].color}"></span>Next ${ZONES[z].name} days
+      </div>
+      ${buckets[z].length ? buckets[z].join('') : '<div style="font-size:0.74rem;color:#484f58">None in the next 12 weeks</div>'}
+    </div>`).join('');
+}
+
+function renderCalendar() {
+  const first = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-01`;
+  document.getElementById('zc-month-label').textContent =
+    new Date(first + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+  const start = getMondayOf(first);
+  const cells = [];
+  const dows = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => `<div class="zc-dow">${d}</div>`).join('');
+
+  for (let w = 0; w < 6; w++) {
+    for (let i = 0; i < 7; i++) {
+      const date = addDays(start, w * 7 + i);
+      const inMonth = date.slice(0, 7) === first.slice(0, 7);
+      if (w === 5 && !inMonth && i === 0) { w = 6; break; } // skip trailing all-other-month week
+      const dayNum = parseInt(date.slice(8), 10);
+      const info = dayInfo(date);
+      const classes = ['zc-cell'];
+      if (!inMonth) classes.push('other-month');
+      if (date === todayStr) classes.push('today');
+      if (!info.working) classes.push('off');
+      if (info.working && info.block) classes.push('blocked');
+
+      let body = '';
+      if (info.working) {
+        const zm = ZONES[info.zone] || { name: '?', color: '#8b949e', bg: 'transparent' };
+        body += `<span class="zc-zone" style="color:${zm.color};background:${zm.bg}"><span class="zn-name">${zm.name}</span><span class="zn-letter">${info.zone || '?'}</span>${info.override ? ' <span class="zc-ovtag">OV</span>' : ''}</span>`;
+        if (info.block) {
+          body += `<span class="zc-blockedtag">Blocked${info.block.label ? ' · ' + info.block.label : ''}</span>`;
+        } else {
+          const dayBk = bookingsFor(date);
+          const dots = info.slots.filter(s => s.enabled).map(s =>
+            `<span class="zc-dot ${slotStatus(date, s, dayBk).full ? 'full' : ''}"></span>`).join('');
+          body += `<span class="zc-dots">${dots}</span>`;
+        }
+      }
+      cells.push(`<div class="${classes.join(' ')}" ${info.working ? `onclick="openDay('${date}')"` : ''}>
+        <span class="zc-daynum">${dayNum}</span>${body}</div>`);
+    }
+  }
+  document.getElementById('zc-grid').innerHTML = dows + cells.join('');
+}
+
+window.openDay = function(dateStr) {
+  const info = dayInfo(dateStr);
+  if (!info.working) return;
+  const zm = ZONES[info.zone] || { name: 'Unknown', color: '#8b949e' };
+  document.getElementById('day-modal-title').innerHTML =
+    `${prettyDate(dateStr)} — <span style="color:${zm.color}">${zm.name}</span>`;
+
+  const dayBk = bookingsFor(dateStr);
+  let html = `<div style="font-size:0.72rem;color:#8b949e;margin-bottom:10px">
+    ${info.week ? `Cycle week ${info.week} of ${info.total} · ` : ''}${zm.name} zone day</div>`;
+  if (info.block) html += `<div class="badge badge-red" style="margin-bottom:10px">Blocked${info.block.label ? ' — ' + info.block.label : ''}</div>`;
+  if (info.override) html += `<div style="font-size:0.74rem;color:#bc8cff;margin-bottom:10px">Week override in effect${info.override.note ? ': ' + info.override.note : ''}</div>`;
+
+  html += info.slots.map(s => {
+    const st = slotStatus(dateStr, s, dayBk);
+    let status;
+    if (!s.enabled) status = '<span class="badge badge-gray">Disabled</span>';
+    else if (info.block) status = '<span class="badge badge-red">Blocked</span>';
+    else if (st.full) status = `<span class="badge badge-orange">Booked${st.names.length ? ' — ' + st.names.join(', ') : ''}</span>`;
+    else status = '<span class="badge badge-green">Open</span>';
+    return `<div class="zc-slotrow"><span style="font-weight:600">${formatTime(s.start_time)}–${formatTime(s.end_time)}</span>${status}</div>`;
+  }).join('');
+
+  html += `<div class="zc-note">Renton ZIPs bookable at 8:00 &amp; 3:30 today regardless of zone. AM-band ZIPs: 8:00 + 10:30 only.</div>`;
+  document.getElementById('day-modal-body').innerHTML = html;
+  document.getElementById('day-modal').classList.remove('hidden');
+};
+
+window.moveMonth = function(delta) {
+  viewMonth += delta;
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  renderCalendar();
+};
+window.goToday = function() {
+  viewYear = parseInt(todayStr.slice(0, 4), 10);
+  viewMonth = parseInt(todayStr.slice(5, 7), 10) - 1;
+  renderCalendar();
+};
+window.closeModal = function(id) { document.getElementById(id).classList.add('hidden'); };
+document.querySelectorAll('.modal-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) b.classList.add('hidden'); }));
+
+async function load() {
+  const [slotsRes, blocksRes, ovRes, bkRes, setRes] = await Promise.all([
+    api('/admin/slots'), api('/admin/block-dates'), api('/admin/week-overrides'),
+    api('/admin/bookings'), api('/admin/settings'),
+  ]);
+  const slotsData = await slotsRes.json();
+  slots = slotsData.slots;
+  patterns = slotsData.patterns;
+  anchors = Object.fromEntries(slotsData.anchors.map(a => [a.slot_id, a.anchor_date]));
+  blocks = await blocksRes.json();
+  overrides = await ovRes.json();
+  bookings = await bkRes.json();
+  try {
+    const s = await setRes.json();
+    if (s.operating_days) operatingDays = JSON.parse(s.operating_days);
+  } catch (e) { /* keep default */ }
+
+  renderLegend();
+  renderNext();
+  goToday();
+}
+load();
+</script>
+</body>
+</html>
