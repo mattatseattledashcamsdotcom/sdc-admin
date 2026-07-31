@@ -356,12 +356,14 @@ window.openNew = function() {
   `;
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="createBooking()">Create Booking</button>
+    <button class="btn btn-primary" id="create-btn" onclick="createBooking()">Create Booking</button>
   `;
   document.getElementById('modal').classList.remove('hidden');
 };
 
+let creatingBooking = false; // double-submit guard: POST creates a calendar event + email, so a double-click must not fire twice
 window.createBooking = async function() {
+  if (creatingBooking) return;
   const name = document.getElementById('edit-name').value.trim();
   const phone = document.getElementById('edit-phone').value.trim();
   const date = document.getElementById('edit-date').value;
@@ -376,25 +378,37 @@ window.createBooking = async function() {
   if (!name || !phone || !date || !time || !street) {
     toast('Name, phone, address, date and time are required', true); return;
   }
-  const res = await api('/admin/bookings', {
-    method: 'POST',
-    body: JSON.stringify({
-      customer_name: name,
-      customer_email: document.getElementById('edit-email').value.trim(),
-      customer_phone: phone,
-      service_address: fullAddress,
-      service_city: city || null,
-      service_state: state || null,
-      appointment_date: date,
-      appointment_time: time,
-      appointment_end_time: document.getElementById('edit-end-time').value,
-      zip,
-      products: document.getElementById('edit-products').value.trim(),
-      notes: document.getElementById('edit-notes').value.trim(),
-    }),
-  });
-  if (res.ok) { toast('Booking created — calendar event added'); closeModal(); allBookings = null; loadBookings(); }
-  else toast('Error creating booking', true);
+  const email = document.getElementById('edit-email').value.trim();
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+    toast('Email address doesn\'t look valid', true); return;
+  }
+  creatingBooking = true;
+  const btn = document.getElementById('create-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
+  try {
+    const res = await api('/admin/bookings', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer_name: name,
+        customer_email: email,
+        customer_phone: phone,
+        service_address: fullAddress,
+        service_city: city || null,
+        service_state: state || null,
+        appointment_date: date,
+        appointment_time: time,
+        appointment_end_time: document.getElementById('edit-end-time').value,
+        zip,
+        products: document.getElementById('edit-products').value.trim(),
+        notes: document.getElementById('edit-notes').value.trim(),
+      }),
+    });
+    if (res.ok) { toast('Booking created — calendar event added'); closeModal(); allBookings = null; loadBookings(); }
+    else toast('Error creating booking', true);
+  } finally {
+    creatingBooking = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Booking'; }
+  }
 };
 
 window.syncLegacy = async function() {

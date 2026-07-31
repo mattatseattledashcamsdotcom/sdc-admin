@@ -39,8 +39,12 @@
     .zc-dots{display:flex;gap:3px;margin-top:auto}
     .zc-dot{width:7px;height:7px;border-radius:50%;border:1.5px solid #3fb950;background:transparent}
     .zc-dot.full{background:#6e7681;border-color:#6e7681}
-    .zc-slotrow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #232946;font-size:0.8rem}
+    .zc-slotrow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #232946;font-size:0.8rem;gap:10px}
     .zc-slotrow:last-child{border-bottom:none}
+    .zc-book-btn{background:rgba(63,185,80,0.15);border:1px solid #2ea043;color:#3fb950;border-radius:6px;padding:4px 12px;font-size:0.72rem;font-weight:700;cursor:pointer}
+    .zc-book-btn:hover{background:rgba(63,185,80,0.28)}
+    .zc-back{background:none;border:none;color:#8b949e;font-size:0.76rem;cursor:pointer;padding:0;margin-bottom:12px}
+    .zc-back:hover{color:#c9d1d9}
     .zc-note{font-size:0.7rem;color:#484f58;margin-top:14px;line-height:1.5}
     @media(max-width:760px){
       .zc-next{grid-template-columns:1fr}
@@ -316,13 +320,103 @@ window.openDay = function(dateStr) {
     if (!s.enabled) status = `<span class="badge badge-gray">Disabled${st.names.length ? ' — ' + st.names.join(', ') : ''}</span>`;
     else if (info.block) status = '<span class="badge badge-red">Blocked</span>';
     else if (st.full) status = `<span class="badge badge-orange">Booked${st.names.length ? ' — ' + st.names.join(', ') : ''}</span>`;
-    else status = '<span class="badge badge-green">Open</span>';
+    else status = `<button class="zc-book-btn" onclick="openBookForm('${dateStr}','${s.id}')">Open — Book</button>`;
     return `<div class="zc-slotrow"><span style="font-weight:600">${formatTime(s.start_time)}–${formatTime(s.end_time)}</span>${status}</div>`;
   }).join('');
 
   html += `<div class="zc-note">Renton ZIPs bookable at 8:00 &amp; 3:30 today regardless of zone. AM-band ZIPs: 8:00 + 10:30 only.</div>`;
   document.getElementById('day-modal-body').innerHTML = html;
   document.getElementById('day-modal').classList.remove('hidden');
+};
+
+window.openBookForm = function(dateStr, slotId) {
+  const slot = slots.find(s => s.id === slotId);
+  if (!slot) return;
+  const info = dayInfo(dateStr);
+  const zm = ZONES[info.zone] || { name: '', color: '#8b949e' };
+  document.getElementById('day-modal-title').innerHTML =
+    `Book: ${prettyDate(dateStr)} · ${formatTime(slot.start_time)} <span style="color:${zm.color}">(${zm.name})</span>`;
+  document.getElementById('day-modal-body').innerHTML = `
+    <button class="zc-back" onclick="openDay('${dateStr}')">‹ Back to day view</button>
+    <div class="form-row" style="margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:0"><label>Customer Name *</label><input type="text" id="zb-name" placeholder="John Smith"></div>
+      <div class="form-group" style="margin-bottom:0"><label>Phone *</label><input type="text" id="zb-phone" placeholder="(206) 555-1234"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:0"><label>Email</label><input type="email" id="zb-email" placeholder="john@email.com"></div>
+      <div class="form-group" style="margin-bottom:0"><label>ZIP</label><input type="text" id="zb-zip" maxlength="5" placeholder="98056"></div>
+    </div>
+    <div class="form-group"><label>Street Address *</label><input type="text" id="zb-address" placeholder="123 Main St"></div>
+    <div class="form-row" style="margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:0"><label>City</label><input type="text" id="zb-city" placeholder="Seattle"></div>
+      <div class="form-group" style="margin-bottom:0"><label>State</label><input type="text" id="zb-state" value="WA" style="max-width:80px"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:0"><label>Start</label><input type="text" value="${formatTime(slot.start_time)}" disabled></div>
+      <div class="form-group" style="margin-bottom:0"><label>End Time</label><input type="time" step="1800" id="zb-end" value="${slot.end_time}"></div>
+    </div>
+    <div class="form-group"><label>Products / What's being installed</label><input type="text" id="zb-products" placeholder="VIOFO A229 Pro 2-Channel, 128GB SD card"></div>
+    <div class="form-group"><label>Notes</label><textarea id="zb-notes" placeholder="Gate code, parking instructions, etc."></textarea></div>
+    <button class="btn btn-primary" id="zb-submit" style="width:100%" onclick="submitSlotBooking('${dateStr}','${slotId}')">Create Booking</button>
+    <div class="zc-note" style="margin-top:8px">Creates a confirmed booking + Google Calendar event. If email is filled in, the customer gets a confirmation email.</div>
+  `;
+  document.getElementById('day-modal').classList.remove('hidden');
+};
+
+let bookingInFlight = false; // double-submit guard — POST creates calendar event + email
+window.submitSlotBooking = async function(dateStr, slotId) {
+  if (bookingInFlight) return;
+  const slot = slots.find(s => s.id === slotId);
+  const name = document.getElementById('zb-name').value.trim();
+  const phone = document.getElementById('zb-phone').value.trim();
+  const street = document.getElementById('zb-address').value.trim();
+  const email = document.getElementById('zb-email').value.trim();
+  if (!name || !phone || !street) { toast('Name, phone and address are required', true); return; }
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) { toast('Email address doesn\'t look valid', true); return; }
+  const city = document.getElementById('zb-city').value.trim();
+  const state = document.getElementById('zb-state').value.trim();
+  const fullAddress = (city || state)
+    ? [street, city && state ? `${city}, ${state}` : city || state].filter(Boolean).join(' ')
+    : street;
+  bookingInFlight = true;
+  const btn = document.getElementById('zb-submit');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const res = await api('/admin/bookings', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer_name: name,
+        customer_email: email,
+        customer_phone: phone,
+        service_address: fullAddress,
+        service_city: city || null,
+        service_state: state || null,
+        appointment_date: dateStr,
+        appointment_time: slot.start_time,
+        appointment_end_time: document.getElementById('zb-end').value || slot.end_time,
+        slot_id: slotId,
+        zip: document.getElementById('zb-zip').value.trim(),
+        products: document.getElementById('zb-products').value.trim(),
+        notes: document.getElementById('zb-notes').value.trim(),
+      }),
+    });
+    if (res.ok) {
+      toast('Booking created — calendar event added');
+      const bkRes = await api('/admin/bookings');
+      bookings = await bkRes.json();
+      renderNext();
+      renderCalendar();
+      openDay(dateStr);
+    } else {
+      toast('Error creating booking', true);
+    }
+  } catch (e) {
+    toast('Error creating booking', true);
+  } finally {
+    bookingInFlight = false;
+    const b = document.getElementById('zb-submit');
+    if (b) { b.disabled = false; b.textContent = 'Create Booking'; }
+  }
 };
 
 window.moveMonth = function(delta) {
@@ -336,6 +430,14 @@ window.goToday = function() {
   viewMonth = parseInt(todayStr.slice(5, 7), 10) - 1;
   renderCalendar();
 };
+window.toast = function(msg, err = false) {
+  const el = document.createElement('div');
+  el.className = `toast ${err ? 'toast-error' : 'toast-success'}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+};
+
 window.closeModal = function(id) { document.getElementById(id).classList.add('hidden'); };
 document.querySelectorAll('.modal-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) b.classList.add('hidden'); }));
 
