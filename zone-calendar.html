@@ -64,9 +64,8 @@
 
   <div class="content">
     <div class="zc-legend" id="zc-legend"></div>
-    <div class="zc-next" id="zc-next"><div class="loading">Loading…</div></div>
 
-    <div class="card" style="padding:16px">
+    <div class="card" style="padding:16px;margin-bottom:20px">
       <div class="zc-cal-bar">
         <button class="btn btn-secondary btn-sm" onclick="moveMonth(-1)">‹ Prev</button>
         <div style="display:flex;align-items:center;gap:12px">
@@ -83,6 +82,8 @@
         Saturdays show their pattern zone — whether a Saturday is worked is controlled by block dates.
       </div>
     </div>
+
+    <div class="zc-next" id="zc-next"><div class="loading">Loading…</div></div>
   </div>
 </div>
 
@@ -187,17 +188,22 @@ function bookingsFor(dateStr) {
   return bookings.filter(b => b.appointment_date === dateStr && !['rejected','cancelled'].includes(b.status));
 }
 
-// Mirror of the worker's capacity + slot-less-overlap logic
+// A slot is full when any booking's TIME RANGE overlaps its window, regardless
+// of which slot_id the booking is tagged with. Spanning appointments (e.g.
+// 10:30–2:30) take out every slot they cover, and manual bookings sitting on
+// disabled/warranty times don't affect the enabled slots.
 function slotStatus(dateStr, slot, dayBk) {
-  const assigned = dayBk.filter(b => b.slot_id === slot.id);
   const sStart = toMins(slot.start_time), sEnd = toMins(slot.end_time);
-  const overlapping = dayBk.filter(b => {
-    if (b.slot_id || !b.appointment_time) return false;
-    const end = b.appointment_end_time ? toMins(b.appointment_end_time) : toMins(b.appointment_time) + 120;
-    return toMins(b.appointment_time) < sEnd && end > sStart;
+  const hits = dayBk.filter(b => {
+    if (b.appointment_time) {
+      const bStart = toMins(b.appointment_time);
+      const bEnd = b.appointment_end_time ? toMins(b.appointment_end_time) : bStart + 120;
+      return bStart < sEnd && bEnd > sStart;
+    }
+    return b.slot_id === slot.id; // no time recorded — fall back to slot tag
   });
-  const full = assigned.length >= slot.capacity || overlapping.length > 0;
-  return { full, names: [...assigned, ...overlapping].map(b => b.customer_name).filter(Boolean) };
+  const full = hits.length >= slot.capacity;
+  return { full, names: [...new Set(hits.map(b => b.customer_name).filter(Boolean))] };
 }
 
 function formatTime(t) {
@@ -307,7 +313,7 @@ window.openDay = function(dateStr) {
   html += info.slots.map(s => {
     const st = slotStatus(dateStr, s, dayBk);
     let status;
-    if (!s.enabled) status = '<span class="badge badge-gray">Disabled</span>';
+    if (!s.enabled) status = `<span class="badge badge-gray">Disabled${st.names.length ? ' — ' + st.names.join(', ') : ''}</span>`;
     else if (info.block) status = '<span class="badge badge-red">Blocked</span>';
     else if (st.full) status = `<span class="badge badge-orange">Booked${st.names.length ? ' — ' + st.names.join(', ') : ''}</span>`;
     else status = '<span class="badge badge-green">Open</span>';
